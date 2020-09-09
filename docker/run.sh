@@ -25,7 +25,7 @@ else
 fi
 
 # set jupyter port
-JUPYTER_PORT=8888
+JUPYTER_PORT=8889
 echo "mapping port docker:${JUPYTER_PORT} --> host:${JUPYTER_PORT}"
 
 # set image name

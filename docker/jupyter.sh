@@ -2,7 +2,7 @@
 # launch jupyter from spacenet7_dev container
 
 # set jupyter port
-JUPYTER_PORT=8888
+JUPYTER_PORT=8889
 if [ $# -eq 1 ]; then
     JUPYTER_PORT=$1
 fi
