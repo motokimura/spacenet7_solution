@@ -1,0 +1,7 @@
+*
+!/configs
+!/scripts
+!/spacenet7_model
+!/static
+!/tools
+!/*.sh
