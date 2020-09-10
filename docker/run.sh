@@ -8,10 +8,10 @@ fi
 # set environment specific parameters
 if [ $ENV = desktop1 ]; then
 	RUNTIME="--runtime nvidia"
-	FEATURE_ROOT=${HOME}/data/spacenet7
+	FEATURE_ROOT=/mnt/sdb1/spacenet7/
 elif [ $ENV = desktop2 ]; then
 	RUNTIME="--runtime nvidia"
-	FEATURE_ROOT=/mnt/sdb1/spacenet7/
+	FEATURE_ROOT=${HOME}/data/spacenet7/
 elif [ $ENV = mac ]; then
 	RUNTIME=""
 	FEATURE_ROOT=${HOME}/data/spacenet7/
