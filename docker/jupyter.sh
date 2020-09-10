@@ -15,4 +15,4 @@ PROJ_DIR=`dirname ${THIS_DIR}`
 
 # build docker image from project root directory
 cd ${PROJ_DIR} && \
-jupyter lab --port ${JUPYTER_PORT} --ip=0.0.0.0 --allow-root --no-browser
+jupyter notebook --port ${JUPYTER_PORT} --ip=0.0.0.0 --allow-root --no-browser
