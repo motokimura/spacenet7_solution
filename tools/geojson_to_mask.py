@@ -4,8 +4,9 @@ import os
 import timeit
 from multiprocessing import Pool
 
-import gdal
 import numpy as np
+
+import gdal
 import skimage
 import solaris as sol
 from solaris.raster.image import create_multiband_geotiff
@@ -115,13 +116,13 @@ if __name__ == '__main__':
     # args to be passed to multiprocessing
     input_args = []
 
-    aoi_dirs = sorted([
+    aois = sorted([
         d for d in os.listdir(args.train_dir)
         if os.path.isdir(os.path.join(args.train_dir, d))
     ])
 
     # prepare input args for multiprocessing
-    for i, aoi in enumerate(aoi_dirs):
+    for aoi in aois:
         image_dir = os.path.join(args.train_dir, aoi, 'images_masked')
         json_dir = os.path.join(args.train_dir, aoi, 'labels_match')
 
