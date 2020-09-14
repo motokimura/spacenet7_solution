@@ -46,8 +46,8 @@ def dump_file_paths(aois, output_path, train_dir, mask_dir):
     results = []
 
     for aoi in aois:
-        image_paths = glob(os.path.join(train_dir, aoi, 'images_masked'),
-                           '*.tif')
+        image_paths = glob(
+            os.path.join(train_dir, aoi, 'images_masked', '*.tif'))
         for image_path in image_paths:
             filename = os.path.basename(image_path)
             mask_path = os.path.join(mask_dir, aoi, filename)
