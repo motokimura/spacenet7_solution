@@ -37,6 +37,7 @@ cd ${PROJ_DIR}
 # launch docker container
 ENV=desktop1
 ./docker/run.sh ${ENV}
+```
 
 ### Preprocess dataset
 
