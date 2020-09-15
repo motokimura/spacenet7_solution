@@ -59,6 +59,9 @@ class SpaceNet7Dataset(Dataset):
         image = io.imread(self.image_paths[i])
         mask = io.imread(self.mask_paths[i])
 
+        # remove alpha channel
+        image = image[:, :, :3]
+
         # extract certain classes from mask
         masks = [(mask[:, :, v] > 0) for v in self.class_values]
         mask = np.stack(masks,
