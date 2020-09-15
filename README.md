@@ -37,3 +37,16 @@ cd ${PROJ_DIR}
 # launch docker container
 ENV=desktop1
 ./docker/run.sh ${ENV}
+
+### Preprocess dataset
+
+All commands below have to be executed inside the container.
+
+```
+./tools/geojson_to_mask.py
+
+./tools/split_dataset.py
+
+# optionally you can create AMI here
+```
+
