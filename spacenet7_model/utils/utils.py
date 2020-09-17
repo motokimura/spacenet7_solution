@@ -91,8 +91,9 @@ def get_aoi_from_path(path):
     Args:
         path ([type]): [description]
     """
+    # path: /data/spacenet7/spacenet7/{train_or_test}/{aoi}/images_masked/{filename}.tif
     import os.path
-    return os.path.basename(os.path.dirname(path))
+    return os.path.basename(os.path.dirname(os.path.dirname(path)))
 
 
 def crop_center(array, crop_wh):
