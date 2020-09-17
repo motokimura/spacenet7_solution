@@ -1,10 +1,12 @@
+import json
 import os.path
+from glob import glob
 
 import torch.utils.data
 
 from ..transforms import get_augmentation, get_preprocess
 from ..utils import train_list_filename, val_list_filename
-from .spacenet7 import SpaceNet7Dataset
+from .spacenet7 import SpaceNet7Dataset, SpaceNet7TestDataset
 
 
 def get_dataloader(config, is_train):
@@ -47,3 +49,53 @@ def get_dataloader(config, is_train):
                                        batch_size=batch_size,
                                        shuffle=shuffle,
                                        num_workers=num_workers)
+
+
+def get_test_dataloader(config):
+    """[summary]
+
+    Args:
+        config ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    preprocessing = get_preprocess(config, is_test=True)
+    augmentation = get_augmentation(config, is_train=False)
+
+    # get full paths to image files
+    if config.TEST_TO_VAL:
+        # use val split for test.
+        split_id = config.INPUT.TRAIN_VAL_SPLIT_ID
+        val_list_path = os.path.join(config.INPUT.TRAIN_VAL_SPLIT_DIR,
+                                     val_list_filename(split_id))
+
+        with open(val_list_path) as f:
+            val_list = json.load(f)
+        image_paths = [data['image_masked'] for data in val_list]
+
+    else:
+        # use test data for test (default).
+        test_dir = config.INPUT.TEST_DIR
+        aois = sorted([
+            d for d in os.listdir(test_dir)
+            if os.path.isdir(os.path.join(test_dir, d))
+        ])
+
+        image_paths = []
+        for aoi in aois:
+            paths = glob(os.path.join(test_dir, aoi, '*.tif'))
+            paths.sort()
+            image_paths.extend(paths)
+
+    dataset = SpaceNet7TestDataset(config,
+                                   image_paths,
+                                   augmentation=augmentation,
+                                   preprocessing=preprocessing)
+
+    return torch.utils.data.DataLoader(
+        dataset,
+        batch_size=config.DATALOADER.TEST_BATCH_SIZE,
+        shuffle=False,
+        num_workers=config.DATALOADER.TEST_NUM_WORKERS,
+    )

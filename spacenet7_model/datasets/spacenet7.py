@@ -86,3 +86,66 @@ class SpaceNet7Dataset(Dataset):
             [type]: [description]
         """
         return len(self.image_paths)
+
+
+class SpaceNet7TestDataset(Dataset):
+    def __init__(self,
+                 config,
+                 image_paths,
+                 augmentation=None,
+                 preprocessing=None):
+        """[summary]
+
+        Args:
+            config ([type]): [description]
+            image_paths ([type]): [description]
+            augmentation ([type], optional): [description]. Defaults to None.
+            preprocessing ([type], optional): [description]. Defaults to None.
+        """
+        self.image_paths = image_paths
+
+        self.device = config.MODEL.DEVICE
+
+        self.augmentation = augmentation
+        self.preprocessing = preprocessing
+
+    def __getitem__(self, i):
+        """[summary]
+
+        Args:
+            i ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        image_path = self.image_paths[i]
+        image = io.imread(image_path)
+
+        # remove alpha channel
+        image = image[:, :, :3]
+
+        original_shape = image.shape
+
+        # apply augmentations
+        if self.augmentation:
+            sample = self.augmentation(image=image)
+            image = sample['image']
+
+        # apply preprocessing
+        if self.preprocessing:
+            sample = self.preprocessing(image=image)
+            image = sample['image']
+
+        return {
+            'image': image,
+            'image_path': image_path,
+            'original_shape': original_shape,
+        }
+
+    def __len__(self):
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+        return len(self.image_paths)
