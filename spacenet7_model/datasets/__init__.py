@@ -84,7 +84,7 @@ def get_test_dataloader(config):
 
         image_paths = []
         for aoi in aois:
-            paths = glob(os.path.join(test_dir, aoi, '*.tif'))
+            paths = glob(os.path.join(test_dir, aoi, 'images_masked/*.tif'))
             paths.sort()
             image_paths.extend(paths)
 
