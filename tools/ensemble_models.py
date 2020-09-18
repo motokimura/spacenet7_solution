@@ -24,8 +24,8 @@ if __name__ == '__main__':
     image_paths = get_image_paths(config.INPUT.TEST_DIR)
 
     subdir = ensemble_subdir(config.ENSEMBLE_EXP_IDS)
-    out_dir = os.path.join(config.ENSEMBLED_PREDICTION_ROOT, subdir)
-    os.makedirs(out_dir, exist_ok=False)
+    out_root = os.path.join(config.ENSEMBLED_PREDICTION_ROOT, subdir)
+    os.makedirs(out_root, exist_ok=False)
 
     for image_path in tqdm(image_paths):
         image_orig = io.imread(image_path)
@@ -40,6 +40,9 @@ if __name__ == '__main__':
         image_filename = os.path.basename(image_path)
         array_filename, _ = os.path.splitext(image_filename)
         array_filename = f'{array_filename}.png'
+
+        out_dir = os.path.join(out_root, aoi)
+        os.makedirs(out_dir, exist_ok=True)
 
         for exp_id in config.ENSEMBLE_EXP_IDS:
             exp_subdir = experiment_subdir(exp_id)
