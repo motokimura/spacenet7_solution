@@ -5,7 +5,7 @@ from glob import glob
 import torch.utils.data
 
 from ..transforms import get_augmentation, get_preprocess
-from ..utils import train_list_filename, val_list_filename
+from ..utils import get_image_paths, train_list_filename, val_list_filename
 from .spacenet7 import SpaceNet7Dataset, SpaceNet7TestDataset
 
 
@@ -77,16 +77,7 @@ def get_test_dataloader(config):
     else:
         # use test data for test (default).
         test_dir = config.INPUT.TEST_DIR
-        aois = sorted([
-            d for d in os.listdir(test_dir)
-            if os.path.isdir(os.path.join(test_dir, d))
-        ])
-
-        image_paths = []
-        for aoi in aois:
-            paths = glob(os.path.join(test_dir, aoi, 'images_masked/*.tif'))
-            paths.sort()
-            image_paths.extend(paths)
+        image_paths = get_image_paths(test_dir)
 
     dataset = SpaceNet7TestDataset(config,
                                    image_paths,

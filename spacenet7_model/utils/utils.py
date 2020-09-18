@@ -20,6 +20,23 @@ def experiment_subdir(exp_id):
     return f'exp_{exp_id:04d}'
 
 
+def ensemble_subdir(exp_ids):
+    """[summary]
+
+    Args:
+        exp_ids ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    exp_ids_ = exp_ids.copy()
+    exp_ids_.sort()
+    subdir = 'exp'
+    for exp_id in exp_ids_:
+        subdir += f'_{exp_id:04d}'
+    return subdir
+
+
 def git_filename():
     """[summary]
 
@@ -83,6 +100,32 @@ def dump_git_info(path):
                   indent=4,
                   sort_keys=False,
                   separators=(',', ': '))
+
+
+def get_image_paths(input_dir):
+    """[summary]
+
+    Args:
+        input_dir ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import os.path
+    from glob import glob
+
+    aois = sorted([
+        d for d in os.listdir(input_dir)
+        if os.path.isdir(os.path.join(input_dir, d))
+    ])
+
+    image_paths = []
+    for aoi in aois:
+        paths = glob(os.path.join(input_dir, aoi, 'images_masked/*.tif'))
+        paths.sort()
+        image_paths.extend(paths)
+
+    return image_paths
 
 
 def get_aoi_from_path(path):
