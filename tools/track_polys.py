@@ -22,9 +22,19 @@ if __name__ == '__main__':
     input_root = os.path.join(config.POLY_ROOT, subdir)
     aois = get_subdirs(input_root)
 
+    # prepare json and output directories
     json_root = os.path.join(config.TRACKED_POLY_ROOT, subdir)
     os.makedirs(json_root, exist_ok=False)
 
+    if config.SOLUTION_OUTPUT_PATH and config.SOLUTION_OUTPUT_PATH != 'none':
+        # only for deployment phase
+        out_path = config.SOLUTION_OUTPUT_PATH
+    else:
+        out_dir = os.path.join(config.SOLUTION_CSV_ROOT, subdir)
+        os.makedirs(out_dir, exist_ok=False)
+        out_path = os.path.join(out_dir, solution_filename())
+
+    # some parameters
     iou_field = 'iou_score'
     id_field = 'Id'
     reverse_order = False
@@ -57,14 +67,6 @@ if __name__ == '__main__':
     json_dirs = [
         os.path.join(json_root, aoi) for aoi in get_subdirs(json_root)
     ]
-
-    if config.SOLUTION_OUTPUT_PATH and config.SOLUTION_OUTPUT_PATH != 'none':
-        # only for deployment phase
-        out_path = config.SOLUTION_OUTPUT_PATH
-    else:
-        out_dir = os.path.join(config.SOLUTION_CSV_ROOT, subdir)
-        os.makedirs(out_dir, exist_ok=False)
-        out_path = os.path.join(out_dir, solution_filename())
 
     convert_geojsons_to_csv(json_dirs, out_path, population='proposal')
 
