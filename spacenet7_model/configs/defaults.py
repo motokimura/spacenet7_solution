@@ -13,7 +13,7 @@ _C.INPUT.TEST_DIR = '/data/spacenet7/spacenet7/test_public'
 
 # Transforms
 _C.TRANSFORM = CN()
-_C.TRANSFORM.TRAIN_RANDOM_CROP_SIZE = (320, 320)
+_C.TRANSFORM.TRAIN_RANDOM_CROP_SIZE = (192, 192)
 _C.TRANSFORM.TRAIN_RANDOM_ROTATE_DEG = (0, 0)
 _C.TRANSFORM.TRAIN_RANDOM_ROTATE_PROB = 1.0
 _C.TRANSFORM.TRAIN_HORIZONTAL_FLIP_PROB = 0.0
@@ -84,15 +84,15 @@ _C.SOLUTION_OUTPUT_PATH = 'none'
 _C.SAVE_CHECKPOINTS = True
 _C.DUMP_GIT_INFO = True
 _C.TEST_TO_VAL = False
-_C.BOUNDARY_SUBTRACT_COEFF = 0.2  # alpha, XXX: not optimized
-_C.CONTACT_SUBTRACT_COEFF = 0.4  # beta, XXX: not optimized
+_C.BOUNDARY_SUBTRACT_COEFF = 0.0  # alpha, XXX: not optimized
+_C.CONTACT_SUBTRACT_COEFF = 0.0  # beta, XXX: not optimized
 _C.METHOD_TO_MAKE_POLYGONS = 'contours'  # ['contours', 'watershed']
 _C.BUILDING_SCORE_THRESH = 0.5  # for 'contours'  # XXX: not optimized
 _C.BUILDING_MIM_AREA_PIXEL = 3.5  # for 'contours'  # XXX: not optimized
 _C.WATERSHED_MAIN_THRESH = 0.3  # for 'watershed'  # XXX: not optimized
 _C.WATERSHED_SEED_THRESH = 0.7  # for 'watershed'  # XXX: not optimized
 _C.WATERSHED_MIN_AREA_PIXEL = 3.5  # for 'watershed'  # XXX: not optimized
-_C.WATERSHED_SEED_MIN_AREA_PIXEL = 1.5  # for 'watershed'  # XXX: not optimized
+_C.WATERSHED_SEED_MIN_AREA_PIXEL = 0.0  # for 'watershed'  # XXX: not optimized
 _C.TRACKING_MIN_IOU = 0.2  # XXX: not optimized
 _C.EXP_ID = 9999  # 0~9999
 _C.ENSEMBLE_EXP_IDS = []
