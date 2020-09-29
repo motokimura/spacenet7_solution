@@ -13,6 +13,9 @@ from solaris.raster.image import create_multiband_geotiff
 from solaris.utils.core import _check_gdf_load
 from tqdm import tqdm
 
+import _init_path
+from spacenet7_model.utils import map_wrapper
+
 
 def parse_args():
     """[summary]
@@ -40,18 +43,6 @@ def parse_args():
                         type=int,
                         default=8)
     return parser.parse_args()
-
-
-def map_wrapper(x):
-    """[summary]
-
-    Args:
-        x ([type]): [description]
-
-    Returns:
-        [type]: [description]
-    """
-    return x[0](*(x[1:]))
 
 
 def generate_mask(image_path, json_path, output_path_mask, boundary_width,

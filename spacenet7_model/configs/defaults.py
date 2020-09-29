@@ -93,6 +93,7 @@ _C.WATERSHED_MAIN_THRESH = 0.3  # for 'watershed'  # XXX: not optimized
 _C.WATERSHED_SEED_THRESH = 0.7  # for 'watershed'  # XXX: not optimized
 _C.WATERSHED_MIN_AREA_PIXEL = 3.5  # for 'watershed'  # XXX: not optimized
 _C.WATERSHED_SEED_MIN_AREA_PIXEL = 1.5  # for 'watershed'  # XXX: not optimized
+_C.TRACKING_MIN_IOU = 0.2  # XXX: not optimized
 _C.EXP_ID = 9999  # 0~9999
 _C.ENSEMBLE_EXP_IDS = []
 
