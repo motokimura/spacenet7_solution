@@ -589,9 +589,9 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
     from tqdm import tqdm
 
     first_file = True  # switch that will be turned off once we process the first file
-    for json_dir in tqdm.tqdm(json_dirs):
+    for json_dir in tqdm(json_dirs):
         json_files = sorted(glob.glob(os.path.join(json_dir, '*.geojson')))
-        for json_file in tqdm.tqdm(json_files):
+        for json_file in tqdm(json_files):
             try:
                 df = gpd.read_file(json_file)
             except (fiona.errors.DriverError):
