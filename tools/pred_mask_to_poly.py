@@ -50,7 +50,7 @@ if __name__ == '__main__':
                 footprint_score,
                 boundary_score,
                 contact_score,
-                alpha=config.BOUNDARY_SUBSTRACT_COEFF,
+                alpha=config.BOUNDARY_SUBTRACT_COEFF,
                 beta=config.CONTACT_SUBTRACT_COEFF)
 
             filename = os.path.basename(path)
