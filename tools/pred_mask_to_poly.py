@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
             filename = os.path.basename(path)
             filename, _ = os.path.splitext(filename)
-            output_path = os.path.join(out_dir, aoi, f'{filename}.geojson')
+            output_path = os.path.join(out_dir, f'{filename}.geojson')
 
             if config.METHOD_TO_MAKE_POLYGONS == 'contours':
                 polys = gen_building_polys_using_contours(
