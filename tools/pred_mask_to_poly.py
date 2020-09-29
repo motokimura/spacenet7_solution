@@ -27,7 +27,7 @@ if __name__ == '__main__':
     os.makedirs(out_root, exist_ok=False)
 
     for i, aoi in enumerate(aois):
-        print(f'processing {aoi} ({i}/{len(aois)}) ...')
+        print(f'processing {aoi} ({i + 1}/{len(aois)}) ...')
 
         paths = glob(os.path.join(input_root, aoi, '*.png'))
         paths.sort()
