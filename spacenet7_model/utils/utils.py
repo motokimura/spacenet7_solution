@@ -29,8 +29,7 @@ def ensemble_subdir(exp_ids):
     Returns:
         [type]: [description]
     """
-    exp_ids_ = exp_ids.copy()
-    exp_ids_.sort()
+    exp_ids_ = sorted(exp_ids)
     subdir = 'exp'
     for exp_id in exp_ids_:
         subdir += f'_{exp_id:04d}'
@@ -102,6 +101,25 @@ def dump_git_info(path):
                   separators=(',', ': '))
 
 
+def get_subdirs(input_dir):
+    """[summary]
+
+    Args:
+        input_dir ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import os.path
+
+    subdirs = sorted([
+        d for d in os.listdir(input_dir)
+        if os.path.isdir(os.path.join(input_dir, d))
+    ])
+
+    return subdirs
+
+
 def get_image_paths(input_dir):
     """[summary]
 
@@ -114,10 +132,7 @@ def get_image_paths(input_dir):
     import os.path
     from glob import glob
 
-    aois = sorted([
-        d for d in os.listdir(input_dir)
-        if os.path.isdir(os.path.join(input_dir, d))
-    ])
+    aois = get_subdirs(input_dir)
 
     image_paths = []
     for aoi in aois:
@@ -134,7 +149,7 @@ def get_aoi_from_path(path):
     Args:
         path ([type]): [description]
     """
-    # path: /data/spacenet7/spacenet7/{train_or_test}/{aoi}/images_masked/{filename}.tif
+    # path: /data/spacenet7/spacenet7/{train_or_test}/{aoi}/images_masked/{filename}
     import os.path
     return os.path.basename(os.path.dirname(os.path.dirname(path)))
 
@@ -197,3 +212,49 @@ def load_prediction_from_png(path, n_channels):
     array = io.imread(path)
     pred = (array.astype(float) / 255.0)[:, :, :n_channels]
     return pred.transpose((2, 0, 1))  # HWC to CHW
+
+
+def compute_building_score(pr_score_footprint, pr_score_boundary,
+                           pr_score_contact, alpha, beta):
+    """[summary]
+
+    Args:
+        pr_score_footprint ([type]): [description]
+        pr_score_boundary ([type]): [description]
+        pr_score_contact ([type]): [description]
+        alpha ([type]): [description]
+        beta ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    pr_score_building = pr_score_footprint
+    pr_score_building *= (1.0 - alpha * pr_score_boundary)
+    pr_score_building *= (1.0 - beta * pr_score_contact)
+    return pr_score_building.clip(min=0.0, max=1.0)
+
+
+def gen_building_polys_using_contours(building_score,
+                                      min_area_pix,
+                                      score_thresh,
+                                      simplify=False,
+                                      output_path=None):
+    """[summary]
+
+    Args:
+        building_score ([type]): [description]
+        min_area_pix ([type]): [description]
+        score_thresh ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import solaris as sol
+    df = sol.vector.mask.mask_to_poly_geojson(building_score,
+                                              output_path=output_path,
+                                              output_type='geojson',
+                                              min_area=min_area_pix,
+                                              bg_threshold=score_thresh,
+                                              do_transform=None,
+                                              simplify=simplify)
+    return df
