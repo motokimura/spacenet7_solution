@@ -16,8 +16,19 @@ def get_spacenet7_preprocess(config, is_test):
     Returns:
         [type]: [description]
     """
-    mean = np.array([0.485, 0.456, 0.406]) * 255  # imagenet mean in RGB order
-    std = np.array([0.229, 0.224, 0.225]) * 255  # imagenet std in RGB order
+    in_channels = config.MODEL.IN_CHANNELS
+    assert in_channels in [3, 4]
+
+    if in_channels == 3:
+        mean = np.array([0.485, 0.456, 0.406
+                         ]) * 255  # imagenet mean in RGB order
+        std = np.array([0.229, 0.224, 0.225
+                        ]) * 255  # imagenet std in RGB order
+    else:
+        mean = np.array([0.485, 0.456, 0.406, 0.5
+                         ]) * 255  # imagenet mean in RGB order + alpha mean
+        std = np.array([0.229, 0.224, 0.225, 0.5
+                        ]) * 255  # imagenet std in RGB order + aplha std
 
     mean = mean[np.newaxis, np.newaxis, :]
     std = std[np.newaxis, np.newaxis, :]

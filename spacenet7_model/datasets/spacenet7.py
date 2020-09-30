@@ -47,6 +47,9 @@ class SpaceNet7Dataset(Dataset):
         self.augmentation = augmentation
         self.preprocessing = preprocessing
 
+        self.in_channels = config.MODEL.IN_CHANNELS
+        assert self.in_channels in [3, 4]
+
     def __getitem__(self, i):
         """[summary]
 
@@ -59,8 +62,11 @@ class SpaceNet7Dataset(Dataset):
         image = io.imread(self.image_paths[i])
         mask = io.imread(self.mask_paths[i])
 
-        # remove alpha channel
-        image = image[:, :, :3]
+        if self.in_channels == 3:
+            # remove alpha channel
+            image = image[:, :, :3]
+        _, _, c = image.shape
+        assert c == self.in_channels
 
         # extract certain classes from mask
         masks = [(mask[:, :, v] > 0) for v in self.class_values]
@@ -109,6 +115,9 @@ class SpaceNet7TestDataset(Dataset):
         self.augmentation = augmentation
         self.preprocessing = preprocessing
 
+        self.in_channels = config.MODEL.IN_CHANNELS
+        assert self.in_channels in [3, 4]
+
     def __getitem__(self, i):
         """[summary]
 
@@ -121,8 +130,11 @@ class SpaceNet7TestDataset(Dataset):
         image_path = self.image_paths[i]
         image = io.imread(image_path)
 
-        # remove alpha channel
-        image = image[:, :, :3]
+        if self.in_channels == 3:
+            # remove alpha channel
+            image = image[:, :, :3]
+        _, _, c = image.shape
+        assert c == self.in_channels
 
         original_shape = image.shape
 
