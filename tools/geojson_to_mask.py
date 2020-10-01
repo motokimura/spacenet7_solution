@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    os.makedirs(args.out_dir)
+    os.makedirs(args.out_dir, exist_ok=False)
 
     # args to be passed to multiprocessing
     input_args = []
