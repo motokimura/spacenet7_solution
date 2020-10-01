@@ -69,7 +69,7 @@ if __name__ == '__main__':
             if len(df) > 0:
                 df.to_file(output_path, driver='GeoJSON')
             else:
-                print('warning: {output_path} is an empty geojson.')
+                print(f'warning: {output_path} is an empty geojson.')
                 save_empty_geojson(output_path)
 
     elapsed = timeit.default_timer() - t0
