@@ -64,7 +64,6 @@ docker run ${RUNTIME} -it --rm --ipc=host \
 	-v ${ENSEMBLED_PREDICTION_DIR}:/ensembled_predictions \
 	-v ${POLY_DIR}:/polygons \
 	-v ${TRACKED_POLY_DIR}:/tracked_polygons \
-	-v ${SOLUTION_DIR}:/solutions \
 	-v ${VAL_PREDICTION_DIR}:/val_predictions \
 	-v ${VAL_ENSEMBLED_PREDICTION_DIR}:/val_ensembled_predictions \
 	-v ${VAL_POLY_DIR}:/val_polygons \

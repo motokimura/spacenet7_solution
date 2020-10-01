@@ -79,7 +79,6 @@ _C.PREDICTION_ROOT = '/predictions'
 _C.ENSEMBLED_PREDICTION_ROOT = '/ensembled_predictions'
 _C.POLY_ROOT = '/polygons'
 _C.TRACKED_POLY_ROOT = '/tracked_polygons'
-_C.SOLUTION_CSV_ROOT = '/solutions'
 _C.SOLUTION_OUTPUT_PATH = 'none'
 _C.SAVE_CHECKPOINTS = True
 _C.DUMP_GIT_INFO = True
