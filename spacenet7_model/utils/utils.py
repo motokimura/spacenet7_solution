@@ -255,6 +255,18 @@ def compute_building_score(pr_score_footprint, pr_score_boundary,
     return pr_score_building.clip(min=0.0, max=1.0)
 
 
+def save_empty_geojson(path):
+    """[summary]
+
+    Args:
+        path ([type]): [description]
+    """
+    import json
+    empty_dict = {"type": "FeatureCollection", "features": []}
+    with open(path, 'w') as f:
+        json.dump(empty_dict, f)
+
+
 def gen_building_polys_using_contours(building_score,
                                       min_area_pix,
                                       score_thresh,
@@ -272,17 +284,6 @@ def gen_building_polys_using_contours(building_score,
     Returns:
         [type]: [description]
     """
-    def save_empty_geojson(path):
-        """[summary]
-
-        Args:
-            path ([type]): [description]
-        """
-        import json
-        empty_dict = {"type": "FeatureCollection", "features": []}
-        with open(path, 'w') as f:
-            json.dump(empty_dict, f)
-
     import solaris as sol
     polygon_gdf = sol.vector.mask.mask_to_poly_geojson(
         building_score,

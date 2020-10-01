@@ -9,7 +9,7 @@ from shapely.geometry import Polygon
 from tqdm import tqdm
 
 import _init_path
-from spacenet7_model.utils import get_subdirs
+from spacenet7_model.utils import get_subdirs, save_empty_geojson
 
 
 def parse_args():
@@ -66,7 +66,10 @@ if __name__ == '__main__':
 
             # dump
             output_path = os.path.join(out_dir, os.path.basename(json_path))
-            df.to_file(output_path, driver='GeoJSON')
+            if len(df) > 0:
+                df.to_file(output_path, driver='GeoJSON')
+            else:
+                save_empty_geojson(output_path)
 
     elapsed = timeit.default_timer() - t0
     print('Time: {:.3f} min'.format(elapsed / 60.0))
