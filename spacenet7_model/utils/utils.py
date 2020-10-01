@@ -266,19 +266,40 @@ def gen_building_polys_using_contours(building_score,
         building_score ([type]): [description]
         min_area_pix ([type]): [description]
         score_thresh ([type]): [description]
+        simplify (bool, optional): [description]. Defaults to False.
+        output_path ([type], optional): [description]. Defaults to None.
 
     Returns:
         [type]: [description]
     """
+    def save_empty_geojson(path):
+        """[summary]
+
+        Args:
+            path ([type]): [description]
+        """
+        import json
+        empty_dict = {"type": "FeatureCollection", "features": []}
+        with open(path, 'w') as f:
+            json.dump(empty_dict, f)
+
     import solaris as sol
-    df = sol.vector.mask.mask_to_poly_geojson(building_score,
-                                              output_path=output_path,
-                                              output_type='geojson',
-                                              min_area=min_area_pix,
-                                              bg_threshold=score_thresh,
-                                              do_transform=None,
-                                              simplify=simplify)
-    return df
+    polygon_gdf = sol.vector.mask.mask_to_poly_geojson(
+        building_score,
+        output_path=None,
+        output_type='geojson',
+        min_area=min_area_pix,
+        bg_threshold=score_thresh,
+        do_transform=None,
+        simplify=simplify)
+
+    if output_path is not None:
+        if len(polygon_gdf) > 0:
+            polygon_gdf.to_file(output_path, driver='GeoJSON')
+        else:
+            save_empty_geojson(output_path)
+
+    return polygon_gdf
 
 
 def calculate_iou(pred_poly, test_data_GDF):
