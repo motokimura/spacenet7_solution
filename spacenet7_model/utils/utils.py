@@ -391,7 +391,7 @@ def gen_building_polys_using_watershed(building_score,
             #polygon_gdf.to_file(output_path, driver='GeoJSON')
             gdict = {
                 "type": "FeatureCollection",
-                "features": [polygon_gdf['geometry']]
+                "features": [polygon_gdf['geometry'].tolist()]
             }
             with open(output_path, 'w') as f:
                 json.dump(gdict, f)
