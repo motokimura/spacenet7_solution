@@ -9,7 +9,8 @@ from spacenet7_model.configs import load_config
 from spacenet7_model.utils import (ensemble_subdir, get_subdirs,
                                    load_prediction_from_png,
                                    compute_building_score,
-                                   gen_building_polys_using_contours)
+                                   gen_building_polys_using_contours,
+                                   gen_building_polys_using_watershed)
 from tqdm import tqdm
 
 if __name__ == '__main__':
@@ -67,7 +68,13 @@ if __name__ == '__main__':
                     simplify=False,
                     output_path=output_path)
             elif config.METHOD_TO_MAKE_POLYGONS == 'watershed':
-                raise NotImplementedError()
+                polys = gen_building_polys_using_watershed(
+                    building_score,
+                    config.WATERSHED_SEED_MIN_AREA_PIXEL,
+                    config.WATERSHED_MIN_AREA_PIXEL,
+                    config.WATERSHED_SEED_THRESH,
+                    config.WATERSHED_MAIN_THRESH,
+                    output_path=output_path)
             else:
                 raise ValueError()
 

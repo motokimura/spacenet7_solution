@@ -303,6 +303,97 @@ def gen_building_polys_using_contours(building_score,
     return polygon_gdf
 
 
+def gen_building_polys_using_watershed(building_score,
+                                       seed_min_area_pix,
+                                       min_area_pix,
+                                       seed_score_thresh,
+                                       main_score_thresh,
+                                       output_path=None):
+    """[summary]
+
+    Args:
+        building_score ([type]): [description]
+        seed_min_area_pix ([type]): [description]
+        min_area_pix ([type]): [description]
+        seed_score_thresh ([type]): [description]
+        main_score_thresh ([type]): [description]
+        output_path ([type], optional): [description]. Defaults to None.
+
+    Returns:
+        [type]: [description]
+    """
+    import numpy as np
+    from skimage import measure
+    from skimage.morphology import watershed
+
+    def remove_small_regions(pred, min_area):
+        """[summary]
+
+        Args:
+            pred ([type]): [description]
+            min_area ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        from skimage import measure
+
+        props = measure.regionprops(pred)
+        for i in range(len(props)):
+            if props[i].area < min_area:
+                pred[pred == i + 1] = 0
+        return measure.label(pred, connectivity=2, background=0)
+
+    def mask_to_polys(mask):
+        """[summary]
+
+        Args:
+            mask ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        import pandas as pd
+        import rasterio
+        import shapely
+
+        shapes = rasterio.features.shapes(y_pred.astype(np.int16), mask > 0)
+        mp = shapely.ops.cascaded_union(
+            shapely.geometry.MultiPolygon(
+                [shapely.geometry.shape(shape) for shape, value in shapes]))
+
+        if isinstance(mp, shapely.geometry.Polygon):
+            polygon_gdf = pd.DataFrame({
+                'geometry': [mp],
+            })
+        else:
+            polygon_gdf = pd.DataFrame({
+                'geometry': [p for p in mp],
+            })
+        return polygon_gdf
+
+    av_pred = (building_score > seed_score_thresh).astype(np.uint8)
+    y_pred = measure.label(av_pred, connectivity=2, background=0)
+    y_pred = remove_small_regions(y_pred, seed_min_area_pix)
+
+    nucl_msk = 1 - building_score
+    nucl_msk = (nucl_msk * 65535).astype('uint16')
+    y_pred = watershed(nucl_msk,
+                       y_pred,
+                       mask=(building_score > main_score_thresh),
+                       watershed_line=True)
+    y_pred = remove_small_regions(y_pred, min_area_pix)
+    polygon_gdf = mask_to_polys(y_pred)
+
+    if output_path is not None:
+        if len(polygon_gdf) > 0:
+            polygon_gdf.to_file(output_path, driver='GeoJSON')
+        else:
+            save_empty_geojson(output_path)
+
+    return polygon_gdf
+
+
 def calculate_iou(pred_poly, test_data_GDF):
     """Get the best intersection over union for a predicted polygon.
     Adapted from: https://github.com/CosmiQ/solaris/blob/master/solaris/eval/iou.py, but
