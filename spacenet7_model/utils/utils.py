@@ -354,10 +354,10 @@ def gen_building_polys_using_watershed(building_score,
             [type]: [description]
         """
         import pandas as pd
-        import rasterio
         import shapely
+        from rasterio import features
 
-        shapes = rasterio.features.shapes(y_pred.astype(np.int16), mask > 0)
+        shapes = features.shapes(y_pred.astype(np.int16), mask > 0)
         mp = shapely.ops.cascaded_union(
             shapely.geometry.MultiPolygon(
                 [shapely.geometry.shape(shape) for shape, value in shapes]))
