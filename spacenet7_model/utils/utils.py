@@ -303,15 +303,6 @@ def gen_building_polys_using_contours(building_score,
     return polygon_gdf
 
 
-import numpy as np
-import pandas as pd
-import rasterio
-import shapely
-
-from skimage import measure
-from skimage.morphology import watershed
-
-
 def gen_building_polys_using_watershed(building_score,
                                        seed_min_area_pix,
                                        min_area_pix,
@@ -331,6 +322,10 @@ def gen_building_polys_using_watershed(building_score,
     Returns:
         [type]: [description]
     """
+    import numpy as np
+    from skimage import measure
+    from skimage.morphology import watershed
+
     def remove_small_regions(pred, min_area):
         """[summary]
 
@@ -341,6 +336,8 @@ def gen_building_polys_using_watershed(building_score,
         Returns:
             [type]: [description]
         """
+        from skimage import measure
+
         props = measure.regionprops(pred)
         for i in range(len(props)):
             if props[i].area < min_area:
@@ -356,6 +353,10 @@ def gen_building_polys_using_watershed(building_score,
         Returns:
             [type]: [description]
         """
+        import pandas as pd
+        import rasterio
+        import shapely
+
         shapes = rasterio.features.shapes(y_pred.astype(np.int16), mask > 0)
         mp = shapely.ops.cascaded_union(
             shapely.geometry.MultiPolygon(
