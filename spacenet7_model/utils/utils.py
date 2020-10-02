@@ -322,6 +322,7 @@ def gen_building_polys_using_watershed(building_score,
     Returns:
         [type]: [description]
     """
+    import geopandas as gpd
     import json
     import numpy as np
     from skimage import measure
@@ -388,13 +389,8 @@ def gen_building_polys_using_watershed(building_score,
 
     if output_path is not None:
         if len(polygon_gdf) > 0:
-            #polygon_gdf.to_file(output_path, driver='GeoJSON')
-            gdict = {
-                "type": "FeatureCollection",
-                "features": [polygon_gdf['geometry'].tolist()]
-            }
-            with open(output_path, 'w') as f:
-                json.dump(gdict, f)
+            polygon_gdf = gpd.GeoDataFrame(polygon_gdf)
+            polygon_gdf.to_file(output_path, driver='GeoJSON')
         else:
             save_empty_geojson(output_path)
 
