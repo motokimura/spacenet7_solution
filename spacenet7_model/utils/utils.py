@@ -323,7 +323,6 @@ def gen_building_polys_using_watershed(building_score,
         [type]: [description]
     """
     import geopandas as gpd
-    import json
     import numpy as np
     from skimage import measure
     from skimage.morphology import watershed
