@@ -322,6 +322,7 @@ def gen_building_polys_using_watershed(building_score,
     Returns:
         [type]: [description]
     """
+    import json
     import numpy as np
     from skimage import measure
     from skimage.morphology import watershed
@@ -387,7 +388,13 @@ def gen_building_polys_using_watershed(building_score,
 
     if output_path is not None:
         if len(polygon_gdf) > 0:
-            polygon_gdf.to_file(output_path, driver='GeoJSON')
+            #polygon_gdf.to_file(output_path, driver='GeoJSON')
+            gdict = {
+                "type": "FeatureCollection",
+                "features": [polygon_gdf['geometry']]
+            }
+            with open(output_path, 'w') as f:
+                json.dump(gdict, f)
         else:
             save_empty_geojson(output_path)
 
