@@ -519,7 +519,8 @@ def track_footprint_identifiers(json_dir,
         # gdf
         gdf_now = gpd.read_file(json_path)
         # drop value if it exists
-        gdf_now = gdf_now.drop(columns=['value'])
+        if 'value' in gdf_now:
+            gdf_now = gdf_now.drop(columns=['value'])
         # get area
         gdf_now['area'] = gdf_now['geometry'].area
         # initialize iou, id
