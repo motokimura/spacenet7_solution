@@ -45,7 +45,8 @@ def main():
     test_width, test_height = config.TRANSFORM.TEST_SIZE
 
     # test loop
-    for batches in tqdm(zip(*test_dataloaders)):
+    for batches in tqdm(zip(*test_dataloaders),
+                        total=len(test_dataloaders[0])):
         # prepare buffers for image file name and predicted array
         batch_size = len(batches[0]['image'])
         output_paths = [None] * batch_size
