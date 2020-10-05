@@ -2,13 +2,17 @@
 import os.path
 import timeit
 
+import albumentations as albu
+import cv2
+import numpy as np
+from tqdm import tqdm
+
 import _init_path
 from spacenet7_model.configs import load_config
 from spacenet7_model.datasets import get_test_dataloader
 from spacenet7_model.models import get_model
 from spacenet7_model.utils import (crop_center, dump_prediction_to_png,
                                    experiment_subdir, get_aoi_from_path)
-from tqdm import tqdm
 
 
 def main():
@@ -18,8 +22,16 @@ def main():
     print('successfully loaded config:')
     print(config)
 
-    # prepare dataloader
-    test_dataloader = get_test_dataloader(config)
+    # prepare dataloaders
+    test_dataloaders = []
+    test_dataloaders.append(get_test_dataloader(config))  # default (w/o tta)
+    for tta_width, tta_height in config.TTA.RESIZE:
+        tta = albu.Resize(width=tta_width,
+                          height=tta_height,
+                          p=1.0,
+                          always_apply=True)
+        test_dataloaders.append(get_test_dataloader(config, tta=tta))
+    N_dataloaders = len(test_dataloaders)
 
     # prepare model to test
     model = get_model(config)
@@ -30,34 +42,62 @@ def main():
     pred_root = os.path.join(config.PREDICTION_ROOT, exp_subdir)
     os.makedirs(pred_root, exist_ok=False)
 
+    test_width, test_height = config.TRANSFORM_TEST_SIZE
+
     # test loop
-    for batch in tqdm(test_dataloader):
-        images = batch['image'].to(config.MODEL.DEVICE)
-        image_paths = batch['image_path']
-        original_heights, original_widths, _ = batch['original_shape']
+    for batches in tqdm(zip(*test_dataloaders)):
+        # prepare buffers for image file name and predicted array
+        batch_size = len(batches[0]['image'])
+        filenames = [None] * batch_size
+        predictions_averaged = np.zeros(shape=[
+            batch_size,
+            len(config.INPUT.CLASSES), test_height, test_width
+        ])
 
-        predictions = model.module.predict(images)
-        predictions = predictions.cpu().numpy()
+        for dataloader_idx, batch in enumerate(batches):
+            images = batch['image'].to(config.MODEL.DEVICE)
+            image_paths = batch['image_path']
+            original_heights, original_widths, _ = batch['original_shape']
 
-        for i in range(len(predictions)):
-            pred = predictions[i]
-            path = image_paths[i]
-            orig_h = original_heights[i].item()
-            orig_w = original_widths[i].item()
+            predictions = model.module.predict(images)
+            predictions = predictions.cpu().numpy()
 
-            # prepare sub-directory under pred_root
-            aoi = get_aoi_from_path(path)
-            out_dir = os.path.join(pred_root, aoi)
-            os.makedirs(out_dir, exist_ok=True)
+            for batch_idx in range(len(predictions)):
+                pred = predictions[batch_idx]
+                path = image_paths[batch_idx]
+                orig_h = original_heights[batch_idx].item()
+                orig_w = original_widths[batch_idx].item()
 
-            # remove padded area
-            pred = crop_center(pred, crop_wh=(orig_w, orig_h))
+                # prepare sub-directory under pred_root
+                aoi = get_aoi_from_path(path)
+                out_dir = os.path.join(pred_root, aoi)
+                os.makedirs(out_dir, exist_ok=True)
 
-            # dump to .png file
+                # resize
+                pred = pred.transpose(1, 2, 0)  # CHW -> HWC
+                pred = cv2.resize(pred, dsize=(test_width, test_height))
+                pred = pred.transpose(2, 0, 1)  # HWC -> CHW
+
+                # remove padded area
+                pred = crop_center(pred, crop_wh=(orig_w, orig_h))
+
+                # store predictions into the buffer
+                predictions_averaged[batch_idx] += pred / N_dataloaders
+
+                # store image filenemes into the buffer
+                filename = os.path.basename(path)
+                if dataloader_idx == 0:
+                    filenames[batch_idx] = filename
+                else:
+                    assert filename == filenames[batch_idx]
+
+        # dump to .png file
+        for filename, pred_averaged in zip(filenames, predictions_averaged):
             filename = os.path.basename(path)
             filename, _ = os.path.splitext(filename)
             filename = f'{filename}.png'
-            dump_prediction_to_png(os.path.join(out_dir, filename), pred)
+            dump_prediction_to_png(os.path.join(out_dir, filename),
+                                   pred_averaged)
 
 
 if __name__ == '__main__':

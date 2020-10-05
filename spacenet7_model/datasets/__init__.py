@@ -2,6 +2,7 @@ import json
 import os.path
 from glob import glob
 
+import albumentations as albu
 import torch.utils.data
 
 from ..transforms import get_augmentation, get_preprocess
@@ -51,17 +52,22 @@ def get_dataloader(config, is_train):
                                        num_workers=num_workers)
 
 
-def get_test_dataloader(config):
+def get_test_dataloader(config, tta=None):
     """[summary]
 
     Args:
         config ([type]): [description]
+        tt_augmentation ([type], optional): [description]. Defaults to None.
 
     Returns:
         [type]: [description]
     """
     preprocessing = get_preprocess(config, is_test=True)
     augmentation = get_augmentation(config, is_train=False)
+
+    if tta is not None:
+        # append test time augmentation
+        augmentation = albu.Compose([augmentation, tta])
 
     # get full paths to image files
     if config.TEST_TO_VAL:
