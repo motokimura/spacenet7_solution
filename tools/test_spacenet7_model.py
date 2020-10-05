@@ -98,7 +98,6 @@ def main():
             pred_averaged = crop_center(pred_averaged, crop_wh=orig_image_wh)
 
             # dump to .png file
-            filename = os.path.basename(path)
             filename, _ = os.path.splitext(filename)
             filename = f'{filename}.png'
             dump_prediction_to_png(os.path.join(out_dir, filename),
