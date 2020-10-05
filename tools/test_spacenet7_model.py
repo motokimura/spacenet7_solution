@@ -48,7 +48,7 @@ def main():
     for batches in tqdm(zip(*test_dataloaders)):
         # prepare buffers for image file name and predicted array
         batch_size = len(batches[0]['image'])
-        filenames = [None] * batch_size
+        output_paths = [None] * batch_size
         orig_image_sizes = [None] * batch_size
         predictions_averaged = np.zeros(shape=[
             batch_size,
@@ -69,11 +69,6 @@ def main():
                 orig_h = original_heights[batch_idx].item()
                 orig_w = original_widths[batch_idx].item()
 
-                # prepare sub-directory under pred_root
-                aoi = get_aoi_from_path(path)
-                out_dir = os.path.join(pred_root, aoi)
-                os.makedirs(out_dir, exist_ok=True)
-
                 # resize
                 pred = pred.transpose(1, 2, 0)  # CHW -> HWC
                 pred = cv2.resize(pred, dsize=(test_width, test_height))
@@ -82,26 +77,31 @@ def main():
                 # store predictions into the buffer
                 predictions_averaged[batch_idx] += pred / N_dataloaders
 
-                # store image filenemes and sizes into the buffers
+                # prepare sub-directory under pred_root
                 filename = os.path.basename(path)
+                filename, _ = os.path.splitext(filename)
+                filename = f'{filename}.png'
+                aoi = get_aoi_from_path(path)
+                out_dir = os.path.join(pred_root, aoi)
+                os.makedirs(out_dir, exist_ok=True)
+
+                # store output paths and original image sizes into the buffers
+                output_path = os.path.join(out_dir, filename)
                 orig_image_wh = (orig_w, orig_h)
                 if dataloader_idx == 0:
-                    filenames[batch_idx] = filename
+                    output_paths[batch_idx] = output_path
                     orig_image_sizes[batch_idx] = orig_image_wh
                 else:
-                    assert filenames[batch_idx] == filename
+                    assert output_paths[batch_idx] == output_path
                     assert orig_image_sizes[batch_idx] == orig_image_wh
 
-        for filename, orig_image_wh, pred_averaged in zip(
-                filenames, orig_image_sizes, predictions_averaged):
+        for output_path, orig_image_wh, pred_averaged in zip(
+                output_paths, orig_image_sizes, predictions_averaged):
             # remove padded area
             pred_averaged = crop_center(pred_averaged, crop_wh=orig_image_wh)
 
             # dump to .png file
-            filename, _ = os.path.splitext(filename)
-            filename = f'{filename}.png'
-            dump_prediction_to_png(os.path.join(out_dir, filename),
-                                   pred_averaged)
+            dump_prediction_to_png(output_path, pred_averaged)
 
 
 if __name__ == '__main__':
