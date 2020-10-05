@@ -49,6 +49,7 @@ def main():
         # prepare buffers for image file name and predicted array
         batch_size = len(batches[0]['image'])
         filenames = [None] * batch_size
+        orig_image_sizes = [None] * batch_size
         predictions_averaged = np.zeros(shape=[
             batch_size,
             len(config.INPUT.CLASSES), test_height, test_width
@@ -78,21 +79,25 @@ def main():
                 pred = cv2.resize(pred, dsize=(test_width, test_height))
                 pred = pred.transpose(2, 0, 1)  # HWC -> CHW
 
-                # remove padded area
-                pred = crop_center(pred, crop_wh=(orig_w, orig_h))
-
                 # store predictions into the buffer
                 predictions_averaged[batch_idx] += pred / N_dataloaders
 
-                # store image filenemes into the buffer
+                # store image filenemes and sizes into the buffers
                 filename = os.path.basename(path)
+                orig_image_wh = (orig_w, orig_h)
                 if dataloader_idx == 0:
                     filenames[batch_idx] = filename
+                    orig_image_sizes[batch_idx] = orig_image_wh
                 else:
-                    assert filename == filenames[batch_idx]
+                    assert filenames[batch_idx] == filename
+                    assert orig_image_sizes[batch_idx] == orig_image_wh
 
-        # dump to .png file
-        for filename, pred_averaged in zip(filenames, predictions_averaged):
+        for filename, orig_image_wh, pred_averaged in zip(
+                filenames, orig_image_sizes, predictions_averaged):
+            # remove padded area
+            pred_averaged = crop_center(pred_averaged, crop_wh=orig_image_wh)
+
+            # dump to .png file
             filename = os.path.basename(path)
             filename, _ = os.path.splitext(filename)
             filename = f'{filename}.png'
