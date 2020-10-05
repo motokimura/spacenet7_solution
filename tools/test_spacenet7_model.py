@@ -42,7 +42,7 @@ def main():
     pred_root = os.path.join(config.PREDICTION_ROOT, exp_subdir)
     os.makedirs(pred_root, exist_ok=False)
 
-    test_width, test_height = config.TRANSFORM_TEST_SIZE
+    test_width, test_height = config.TRANSFORM.TEST_SIZE
 
     # test loop
     for batches in tqdm(zip(*test_dataloaders)):
