@@ -22,16 +22,23 @@ def main():
     print('successfully loaded config:')
     print(config)
 
-    # prepare dataloaders
-    test_dataloaders = []
-    test_dataloaders.append(get_test_dataloader(config))  # default (w/o tta)
-    for tta_width, tta_height in config.TTA.RESIZE:
+    # prepare dataloaders and weights for averaging
+    test_dataloaders, weights = [], []
+    # default dataloader (w/o tta)
+    test_dataloaders.append(get_test_dataloader(config))
+    weights.append(1.0)
+    # dataloaders w/ tta
+    for (tta_width, tta_height), weight in zip(config.TTA.RESIZE,
+                                               config.TTA.RESIZE_WEIGHTS):
         tta = albu.Resize(width=tta_width,
                           height=tta_height,
                           p=1.0,
                           always_apply=True)
         test_dataloaders.append(get_test_dataloader(config, tta=tta))
-    N_dataloaders = len(test_dataloaders)
+        weights.append(weight)
+    # normalize weights
+    weights = np.array(weights)
+    weights /= weights.sum()
 
     # prepare model to test
     model = get_model(config)
@@ -76,7 +83,8 @@ def main():
                 pred = pred.transpose(2, 0, 1)  # HWC -> CHW
 
                 # store predictions into the buffer
-                predictions_averaged[batch_idx] += pred / N_dataloaders
+                predictions_averaged[
+                    batch_idx] += pred * weights[dataloader_idx]
 
                 # prepare sub-directory under pred_root
                 filename = os.path.basename(path)
