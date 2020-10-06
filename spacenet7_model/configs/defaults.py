@@ -24,8 +24,8 @@ _C.TRANSFORM.TEST_SIZE = (1024, 1024)
 
 # Test time augmentations
 _C.TTA = CN()
-_C.TTA.RESIZE = []  # e.g., [[832, 832], [1536, 1536]]
-_C.TTA.RESIZE_WEIGHTS = []  # e.g., [0.5, 0.5]
+_C.TTA.RESIZE = []  # e.g., [[928, 928], [1152, 1152]] or [[1152, 1152]]
+_C.TTA.RESIZE_WEIGHTS = []  # e.g., [0.125, 0.25] or [0.5]
 
 # Data loader
 _C.DATALOADER = CN()
