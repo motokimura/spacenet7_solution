@@ -30,6 +30,15 @@ def get_spacenet7_preprocess(config, is_test):
         std = np.array([0.229, 0.224, 0.225, 0.5
                         ]) * 255  # imagenet std in RGB order + aplha std
 
+    # tile mean and std if concat previous/next frames
+    N_tile = 1
+    if config.INPUT.CONCAT_PREV_FRAME:
+        N_tile += 1
+    if config.INPUT.CONCAT_NEXT_FRAME:
+        N_tile += 1
+    mean = np.tile(mean, N_tile)
+    std = np.tile(std, N_tile)
+
     mean = mean[np.newaxis, np.newaxis, :]
     std = std[np.newaxis, np.newaxis, :]
 

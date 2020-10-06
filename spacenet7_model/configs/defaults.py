@@ -10,6 +10,8 @@ _C.INPUT.CLASSES = [
     'building_footprint', 'building_boundary', 'building_contact'
 ]
 _C.INPUT.TEST_DIR = '/data/spacenet7/spacenet7/test_public'
+_C.INPUT.CONCAT_PREV_FRAME = False
+_C.INPUT.CONCAT_NEXT_FRAME = False
 
 # Transforms
 _C.TRANSFORM = CN()
