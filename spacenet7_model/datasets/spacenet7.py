@@ -143,6 +143,18 @@ class SpaceNet7TestDataset(Dataset):
         for data in data_list:
             self.image_paths.append(data['image_masked'])
 
+        # path to previous frame
+        if config.INPUT.CONCAT_PREV_FRAME:
+            self.image_prev_paths = []
+            for data in data_list:
+                self.image_prev_paths.append(data['image_masked_prev'])
+
+        # path to next frame
+        if config.INPUT.CONCAT_NEXT_FRAME:
+            self.image_next_paths = []
+            for data in data_list:
+                self.image_next_paths.append(data['image_masked_next'])
+
         self.device = config.MODEL.DEVICE
 
         self.augmentation = augmentation
@@ -150,6 +162,9 @@ class SpaceNet7TestDataset(Dataset):
 
         self.in_channels = config.MODEL.IN_CHANNELS
         assert self.in_channels in [3, 4]
+
+        self.concat_prev_frame = config.INPUT.CONCAT_PREV_FRAME
+        self.concat_next_frame = config.INPUT.CONCAT_NEXT_FRAME
 
     def __getitem__(self, i):
         """[summary]
@@ -168,6 +183,24 @@ class SpaceNet7TestDataset(Dataset):
             image = image[:, :, :3]
         _, _, c = image.shape
         assert c == self.in_channels
+
+        # concat previous frame
+        if self.concat_prev_frame:
+            image_prev = io.imread(self.image_prev_paths[i])
+            if self.in_channels == 3:
+                image_prev = image_prev[:, :, :3]
+            _, _, c = image_prev.shape
+            assert c == self.in_channels
+            image = np.concatenate([image_prev, image], axis=2)
+
+        # concat next frame
+        if self.concat_next_frame:
+            image_next = io.imread(self.image_next_paths[i])
+            if self.in_channels == 3:
+                image_next = image_next[:, :, :3]
+            _, _, c = image_next.shape
+            assert c == self.in_channels
+            image = np.concatenate([image, image_next], axis=2)
 
         original_shape = image.shape
 
