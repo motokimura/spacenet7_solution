@@ -17,9 +17,16 @@ def get_model(config):
     arch = config.MODEL.ARCHITECTURE
     backbone = config.MODEL.BACKBONE
     encoder_weights = config.MODEL.ENCODER_PRETRAINED_FROM
-    in_channels = config.MODEL.IN_CHANNELS
     n_classes = len(config.INPUT.CLASSES)
     activation = config.MODEL.ACTIVATION
+
+    # compute model input channels
+    base_channels = config.MODEL.IN_CHANNELS
+    in_channels = base_channels
+    if config.INPUT.CONCAT_PREV_FRAME:
+        in_channels += base_channels
+    if config.INPUT.CONCAT_NEXT_FRAME:
+        in_channels += base_channels
 
     # unet specific
     decoder_attention_type = 'scse' if config.MODEL.UNET_ENABLE_DECODER_SCSE else None

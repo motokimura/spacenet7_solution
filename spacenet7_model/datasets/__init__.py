@@ -6,7 +6,7 @@ import albumentations as albu
 import torch.utils.data
 
 from ..transforms import get_augmentation, get_preprocess
-from ..utils import get_image_paths, train_list_filename, val_list_filename
+from ..utils import get_subdirs, train_list_filename, val_list_filename
 from .spacenet7 import SpaceNet7Dataset, SpaceNet7TestDataset
 
 
@@ -41,8 +41,11 @@ def get_dataloader(config, is_train):
         num_workers = config.DATALOADER.VAL_NUM_WORKERS
         shuffle = False
 
+    with open(data_list_path) as f:
+        data_list = json.load(f)
+
     dataset = SpaceNet7Dataset(config,
-                               data_list_path,
+                               data_list,
                                augmentation=augmentation,
                                preprocessing=preprocessing)
 
@@ -73,20 +76,40 @@ def get_test_dataloader(config, tta=None):
     if config.TEST_TO_VAL:
         # use val split for test.
         split_id = config.INPUT.TRAIN_VAL_SPLIT_ID
-        val_list_path = os.path.join(config.INPUT.TRAIN_VAL_SPLIT_DIR,
-                                     val_list_filename(split_id))
-
-        with open(val_list_path) as f:
-            val_list = json.load(f)
-        image_paths = [data['image_masked'] for data in val_list]
+        data_list_path = os.path.join(config.INPUT.TRAIN_VAL_SPLIT_DIR,
+                                      val_list_filename(split_id))
+        with open(data_list_path) as f:
+            data_list = json.load(f)
 
     else:
         # use test data for test (default).
+        data_list = []
         test_dir = config.INPUT.TEST_DIR
-        image_paths = get_image_paths(test_dir)
+        aois = get_subdirs(test_dir)
+        for aoi in aois:
+            image_paths = glob(
+                os.path.join(test_dir, aoi, 'images_masked/*.tif'))
+            image_paths.sort()
+
+            N = len(image_paths)
+            for i in range(N):
+                # current frame
+                image_path = image_paths[i]
+                # previous frame
+                image_prev_path = image_paths[0] if i == 0 \
+                    else image_paths[i - 1]
+                # next frame
+                image_next_path = image_paths[N - 1] if i == N - 1 \
+                    else image_paths[i + 1]
+                # append them to data list
+                data_list.append({
+                    'image_masked': image_path,
+                    'image_masked_prev': image_prev_path,
+                    'image_masked_next': image_next_path
+                })
 
     dataset = SpaceNet7TestDataset(config,
-                                   image_paths,
+                                   data_list,
                                    augmentation=augmentation,
                                    preprocessing=preprocessing)
 

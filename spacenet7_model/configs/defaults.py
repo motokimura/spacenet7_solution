@@ -10,6 +10,8 @@ _C.INPUT.CLASSES = [
     'building_footprint', 'building_boundary', 'building_contact'
 ]
 _C.INPUT.TEST_DIR = '/data/spacenet7/spacenet7/test_public'
+_C.INPUT.CONCAT_PREV_FRAME = False
+_C.INPUT.CONCAT_NEXT_FRAME = False
 
 # Transforms
 _C.TRANSFORM = CN()
@@ -24,8 +26,8 @@ _C.TRANSFORM.TEST_SIZE = (1024, 1024)
 
 # Test time augmentations
 _C.TTA = CN()
-_C.TTA.RESIZE = []  # e.g., [[928, 928], [1152, 1152]] or [[1152, 1152]]
-_C.TTA.RESIZE_WEIGHTS = []  # e.g., [0.125, 0.25] or [0.5]
+_C.TTA.RESIZE = []  # e.g., [[928, 928], [1152, 1152]]
+_C.TTA.RESIZE_WEIGHTS = []  # e.g., [0.125, 0.25]
 
 # Data loader
 _C.DATALOADER = CN()

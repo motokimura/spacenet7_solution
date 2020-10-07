@@ -49,14 +49,28 @@ def dump_file_paths(aois, output_path, train_dir, mask_dir):
         image_paths = glob(
             os.path.join(train_dir, aoi, 'images_masked', '*.tif'))
         image_paths.sort()
-        for image_path in image_paths:
+
+        N = len(image_paths)
+        for i in range(N):
+            # get path to mask
+            image_path = image_paths[i]
             filename = os.path.basename(image_path)
             mask_path = os.path.join(mask_dir, aoi, filename)
             assert os.path.exists(mask_path)
 
+            # previous frame
+            image_prev_path = image_paths[0] if i == 0 \
+                else image_paths[i - 1]
+
+            # next frame
+            image_next_path = image_paths[N - 1] if i == N - 1 \
+                else image_paths[i + 1]
+
             result = {}
             result['image_masked'] = image_path
             result['building_mask'] = mask_path
+            result['image_masked_prev'] = image_prev_path
+            result['image_masked_next'] = image_next_path
             results.append(result)
 
     with open(output_path, 'w') as f:
