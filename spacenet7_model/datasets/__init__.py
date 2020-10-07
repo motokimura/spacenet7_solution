@@ -41,8 +41,11 @@ def get_dataloader(config, is_train):
         num_workers = config.DATALOADER.VAL_NUM_WORKERS
         shuffle = False
 
+    with open(data_list_path) as f:
+        data_list = json.load(f)
+
     dataset = SpaceNet7Dataset(config,
-                               data_list_path,
+                               data_list,
                                augmentation=augmentation,
                                preprocessing=preprocessing)
 
@@ -73,20 +76,22 @@ def get_test_dataloader(config, tta=None):
     if config.TEST_TO_VAL:
         # use val split for test.
         split_id = config.INPUT.TRAIN_VAL_SPLIT_ID
-        val_list_path = os.path.join(config.INPUT.TRAIN_VAL_SPLIT_DIR,
-                                     val_list_filename(split_id))
-
-        with open(val_list_path) as f:
-            val_list = json.load(f)
-        image_paths = [data['image_masked'] for data in val_list]
+        data_list_path = os.path.join(config.INPUT.TRAIN_VAL_SPLIT_DIR,
+                                      val_list_filename(split_id))
+        with open(data_list_path) as f:
+            data_list = json.load(f)
 
     else:
         # use test data for test (default).
         test_dir = config.INPUT.TEST_DIR
         image_paths = get_image_paths(test_dir)
+        data_list = []
+        for image_path in image_paths:
+            data = {'image_masked': image_path}
+            data_list.append(data)
 
     dataset = SpaceNet7TestDataset(config,
-                                   image_paths,
+                                   data_list,
                                    augmentation=augmentation,
                                    preprocessing=preprocessing)
 

@@ -15,21 +15,18 @@ class SpaceNet7Dataset(Dataset):
 
     def __init__(self,
                  config,
-                 data_list_path,
+                 data_list,
                  augmentation=None,
                  preprocessing=None):
         """[summary]
 
         Args:
             config ([type]): [description]
-            data_list_path ([type]): [description]
+            data_list ([type]): [description]
             augmentation ([type], optional): [description]. Defaults to None.
             preprocessing ([type], optional): [description]. Defaults to None.
         """
         # generate full path to image/label files
-        with open(data_list_path) as f:
-            data_list = json.load(f)
-
         self.image_paths, self.mask_paths = [], []
         for data in data_list:
             self.image_paths.append(data['image_masked'])
@@ -130,18 +127,21 @@ class SpaceNet7Dataset(Dataset):
 class SpaceNet7TestDataset(Dataset):
     def __init__(self,
                  config,
-                 image_paths,
+                 data_list,
                  augmentation=None,
                  preprocessing=None):
         """[summary]
 
         Args:
             config ([type]): [description]
-            image_paths ([type]): [description]
+            data_list ([type]): [description]
             augmentation ([type], optional): [description]. Defaults to None.
             preprocessing ([type], optional): [description]. Defaults to None.
         """
-        self.image_paths = image_paths
+        # generate full path to image/label files
+        self.image_paths = []
+        for data in data_list:
+            self.image_paths.append(data['image_masked'])
 
         self.device = config.MODEL.DEVICE
 
