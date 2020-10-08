@@ -97,9 +97,9 @@ _C.BUILDING_SCORE_THRESH = 0.5  # for 'contours'
 _C.BUILDING_MIM_AREA_PIXEL = 8.0  # for 'contours'
 _C.WATERSHED_MAIN_THRESH = 0.3
 _C.WATERSHED_SEED_THRESH = 0.7
-_C.WATERSHED_MIN_AREA_PIXEL = 8.0  # for 'watershed'  # XXX: not optimized
+_C.WATERSHED_MIN_AREA_PIXEL = 6.0  # for 'watershed'  # XXX: smaller may be better
 _C.WATERSHED_SEED_MIN_AREA_PIXEL = 0.0  # for 'watershed'
-_C.TRACKING_MIN_IOU = 0.2  # XXX: not optimized
+_C.TRACKING_MIN_IOU = 0.1  # XXX: smaller may be better
 _C.EXP_ID = 9999  # 0~9999
 _C.ENSEMBLE_EXP_IDS = []
 
