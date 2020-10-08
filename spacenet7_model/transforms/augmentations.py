@@ -6,18 +6,22 @@ import numpy as np
 import albumentations as albu
 
 
-def get_spacenet7_augmentation(config, is_train):
+def get_spacenet7_augmentation(config, is_train, tta_resize_wh=None):
     """[summary]
 
     Args:
         config ([type]): [description]
         is_train (bool): [description]
+        tta_resize_wh ([type], optional): [description]. Defaults to None.
 
     Returns:
         [type]: [description]
     """
+    size_scale = config.TRANSFORM.SIZE_SCALE
 
     if is_train:
+        assert tta_resize_wh is None
+
         # size after cropping
         base_width = config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0]
         base_height = config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[1]
@@ -43,6 +47,10 @@ def get_spacenet7_augmentation(config, is_train):
                 brightness_std=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_STD,
                 p=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_PROB)),
         ]
+
+        resize_width = int(size_scale * base_width)
+        resize_height = int(size_scale * base_height)
+
     else:
         # size after padding
         base_width = config.TRANSFORM.TEST_SIZE[0]
@@ -56,12 +64,15 @@ def get_spacenet7_augmentation(config, is_train):
                              border_mode=0),
         ]
 
-    size_scale = config.TRANSFORM.SIZE_SCALE
-    if size_scale != 1.0:
+        tta_width, tta_height = tta_resize
+        resize_width = int(size_scale * tta_width)
+        resize_height = int(size_scale * tta_height)
+
+    if (base_width != resize_width) or (base_height != resize_height):
         # append resizing
         augmentation.append(
-            albu.Resize(width=int(base_width * size_scale),
-                        height=int(base_height * size_scale),
+            albu.Resize(width=resize_width,
+                        height=resize_height,
                         always_apply=True))
 
     return albu.Compose(augmentation)

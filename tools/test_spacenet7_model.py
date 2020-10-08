@@ -2,7 +2,6 @@
 import os.path
 import timeit
 
-import albumentations as albu
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -28,13 +27,10 @@ def main():
     test_dataloaders.append(get_test_dataloader(config))
     weights.append(1.0)
     # dataloaders w/ tta
-    for (tta_width, tta_height), weight in zip(config.TTA.RESIZE,
-                                               config.TTA.RESIZE_WEIGHTS):
-        tta = albu.Resize(width=tta_width,
-                          height=tta_height,
-                          p=1.0,
-                          always_apply=True)
-        test_dataloaders.append(get_test_dataloader(config, tta=tta))
+    for tta_resize_wh, weight in zip(config.TTA.RESIZE,
+                                     config.TTA.RESIZE_WEIGHTS):
+        test_dataloaders.append(
+            get_test_dataloader(config, tta_resize_wh=tta_resize_wh))
         weights.append(weight)
     # normalize weights
     weights = np.array(weights)

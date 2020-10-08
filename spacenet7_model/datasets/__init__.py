@@ -55,22 +55,20 @@ def get_dataloader(config, is_train):
                                        num_workers=num_workers)
 
 
-def get_test_dataloader(config, tta=None):
+def get_test_dataloader(config, tta_resize_wh=None):
     """[summary]
 
     Args:
         config ([type]): [description]
-        tta ([type], optional): [description]. Defaults to None.
+        tta_resize_wh ([type], optional): [description]. Defaults to None.
 
     Returns:
         [type]: [description]
     """
     preprocessing = get_preprocess(config, is_test=True)
-    augmentation = get_augmentation(config, is_train=False)
-
-    if tta is not None:
-        # append test time augmentation
-        augmentation = albu.Compose([augmentation, tta])
+    augmentation = get_augmentation(config,
+                                    is_train=False,
+                                    tta_resize_wh=tta_resize_wh)
 
     # get full paths to image files
     if config.TEST_TO_VAL:
