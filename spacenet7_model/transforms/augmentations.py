@@ -64,7 +64,10 @@ def get_spacenet7_augmentation(config, is_train, tta_resize_wh=None):
                              border_mode=0),
         ]
 
-        tta_width, tta_height = tta_resize_wh
+        if tta_resize_wh is None:
+            tta_width, tta_height = base_width, base_height
+        else:
+            tta_width, tta_height = tta_resize_wh
         resize_width = int(size_scale * tta_width)
         resize_height = int(size_scale * tta_height)
 
