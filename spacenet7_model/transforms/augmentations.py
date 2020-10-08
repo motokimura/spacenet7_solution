@@ -16,6 +16,8 @@ def get_spacenet7_augmentation(config, is_train):
     Returns:
         [type]: [description]
     """
+    zoom = 2
+
     if is_train:
         augmentation = [
             # random flip
@@ -36,13 +38,24 @@ def get_spacenet7_augmentation(config, is_train):
                 _random_brightness,
                 brightness_std=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_STD,
                 p=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_PROB)),
+            # XXX: zoom
+            albu.Resize(
+                width=int(config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0] * zoom),
+                height=int(config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[1] * zoom),
+                p=1.0,
+                always_apply=True)
         ]
     else:
         augmentation = [
             albu.PadIfNeeded(min_width=config.TRANSFORM.TEST_SIZE[0],
                              min_height=config.TRANSFORM.TEST_SIZE[1],
                              always_apply=True,
-                             border_mode=0)
+                             border_mode=0),
+            # XXX: zoom
+            albu.Resize(width=int(config.TRANSFORM.TEST_SIZE[0] * zoom),
+                        height=int(config.TRANSFORM.TEST_SIZE[1] * zoom),
+                        p=1.0,
+                        always_apply=True)
         ]
     return albu.Compose(augmentation)
 
