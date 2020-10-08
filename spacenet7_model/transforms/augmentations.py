@@ -6,17 +6,26 @@ import numpy as np
 import albumentations as albu
 
 
-def get_spacenet7_augmentation(config, is_train):
+def get_spacenet7_augmentation(config, is_train, tta_resize_wh=None):
     """[summary]
 
     Args:
         config ([type]): [description]
         is_train (bool): [description]
+        tta_resize_wh ([type], optional): [description]. Defaults to None.
 
     Returns:
         [type]: [description]
     """
+    size_scale = config.TRANSFORM.SIZE_SCALE
+
     if is_train:
+        assert tta_resize_wh is None
+
+        # size after cropping
+        base_width = config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0]
+        base_height = config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[1]
+
         augmentation = [
             # random flip
             albu.HorizontalFlip(p=config.TRANSFORM.TRAIN_HORIZONTAL_FLIP_PROB),
@@ -29,21 +38,46 @@ def get_spacenet7_augmentation(config, is_train):
                 p=config.TRANSFORM.TRAIN_RANDOM_ROTATE_PROB,
                 border_mode=0),
             # random crop
-            albu.RandomCrop(width=config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0],
-                            height=config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[1],
+            albu.RandomCrop(width=base_width,
+                            height=base_height,
                             always_apply=True),
+            # random brightness
             albu.Lambda(image=functools.partial(
                 _random_brightness,
                 brightness_std=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_STD,
                 p=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_PROB)),
         ]
+
+        resize_width = int(size_scale * base_width)
+        resize_height = int(size_scale * base_height)
+
     else:
+        # size after padding
+        base_width = config.TRANSFORM.TEST_SIZE[0]
+        base_height = config.TRANSFORM.TEST_SIZE[1]
+
         augmentation = [
-            albu.PadIfNeeded(min_width=config.TRANSFORM.TEST_SIZE[0],
-                             min_height=config.TRANSFORM.TEST_SIZE[1],
+            # padding
+            albu.PadIfNeeded(min_width=base_width,
+                             min_height=base_height,
                              always_apply=True,
-                             border_mode=0)
+                             border_mode=0),
         ]
+
+        if tta_resize_wh is None:
+            tta_width, tta_height = base_width, base_height
+        else:
+            tta_width, tta_height = tta_resize_wh
+        resize_width = int(size_scale * tta_width)
+        resize_height = int(size_scale * tta_height)
+
+    if (base_width != resize_width) or (base_height != resize_height):
+        # append resizing
+        augmentation.append(
+            albu.Resize(width=resize_width,
+                        height=resize_height,
+                        always_apply=True))
+
     return albu.Compose(augmentation)
 
 

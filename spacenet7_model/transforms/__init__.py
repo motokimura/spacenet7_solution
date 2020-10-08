@@ -15,14 +15,17 @@ def get_preprocess(config, is_test):
     return get_spacenet7_preprocess(config, is_test)
 
 
-def get_augmentation(config, is_train):
+def get_augmentation(config, is_train, tta_resize_wh=None):
     """[summary]
 
     Args:
         config ([type]): [description]
         is_train (bool): [description]
+        tta_resize_wh ([type], optional): [description]. Defaults to None.
 
     Returns:
         [type]: [description]
     """
-    return get_spacenet7_augmentation(config, is_train)
+    return get_spacenet7_augmentation(config,
+                                      is_train,
+                                      tta_resize_wh=tta_resize_wh)

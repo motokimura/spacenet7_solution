@@ -2,7 +2,6 @@
 import os.path
 import timeit
 
-import albumentations as albu
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -28,13 +27,10 @@ def main():
     test_dataloaders.append(get_test_dataloader(config))
     weights.append(1.0)
     # dataloaders w/ tta
-    for (tta_width, tta_height), weight in zip(config.TTA.RESIZE,
-                                               config.TTA.RESIZE_WEIGHTS):
-        tta = albu.Resize(width=tta_width,
-                          height=tta_height,
-                          p=1.0,
-                          always_apply=True)
-        test_dataloaders.append(get_test_dataloader(config, tta=tta))
+    for tta_resize_wh, weight in zip(config.TTA.RESIZE,
+                                     config.TTA.RESIZE_WEIGHTS):
+        test_dataloaders.append(
+            get_test_dataloader(config, tta_resize_wh=tta_resize_wh))
         weights.append(weight)
     # normalize weights
     weights = np.array(weights)
@@ -77,10 +73,12 @@ def main():
                 orig_h = original_heights[batch_idx].item()
                 orig_w = original_widths[batch_idx].item()
 
-                # resize
-                pred = pred.transpose(1, 2, 0)  # CHW -> HWC
-                pred = cv2.resize(pred, dsize=(test_width, test_height))
-                pred = pred.transpose(2, 0, 1)  # HWC -> CHW
+                # resize (only when resize tta or input resizing is applied)
+                _, pred_height, pred_width = pred.shape
+                if (pred_width != test_width) or (pred_height != test_height):
+                    pred = pred.transpose(1, 2, 0)  # CHW -> HWC
+                    pred = cv2.resize(pred, dsize=(test_width, test_height))
+                    pred = pred.transpose(2, 0, 1)  # HWC -> CHW
 
                 # store predictions into the buffer
                 predictions_averaged[
