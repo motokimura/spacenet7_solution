@@ -60,7 +60,7 @@ def get_test_dataloader(config, tta=None):
 
     Args:
         config ([type]): [description]
-        tt_augmentation ([type], optional): [description]. Defaults to None.
+        tta ([type], optional): [description]. Defaults to None.
 
     Returns:
         [type]: [description]

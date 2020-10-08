@@ -16,9 +16,12 @@ def get_spacenet7_augmentation(config, is_train):
     Returns:
         [type]: [description]
     """
-    zoom = 2
 
     if is_train:
+        # size after cropping
+        base_width = config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0]
+        base_height = config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[1]
+
         augmentation = [
             # random flip
             albu.HorizontalFlip(p=config.TRANSFORM.TRAIN_HORIZONTAL_FLIP_PROB),
@@ -31,32 +34,36 @@ def get_spacenet7_augmentation(config, is_train):
                 p=config.TRANSFORM.TRAIN_RANDOM_ROTATE_PROB,
                 border_mode=0),
             # random crop
-            albu.RandomCrop(width=config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0],
-                            height=config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[1],
+            albu.RandomCrop(width=base_width,
+                            height=base_height,
                             always_apply=True),
+            # random brightness
             albu.Lambda(image=functools.partial(
                 _random_brightness,
                 brightness_std=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_STD,
                 p=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_PROB)),
-            # XXX: zoom
-            albu.Resize(
-                width=int(config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0] * zoom),
-                height=int(config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[1] * zoom),
-                p=1.0,
-                always_apply=True)
         ]
     else:
+        # size after padding
+        base_width = config.TRANSFORM.TEST_SIZE[0]
+        base_height = config.TRANSFORM.TEST_SIZE[1]
+
         augmentation = [
-            albu.PadIfNeeded(min_width=config.TRANSFORM.TEST_SIZE[0],
-                             min_height=config.TRANSFORM.TEST_SIZE[1],
+            # padding
+            albu.PadIfNeeded(min_width=base_width,
+                             min_height=base_height,
                              always_apply=True,
                              border_mode=0),
-            # XXX: zoom
-            albu.Resize(width=int(config.TRANSFORM.TEST_SIZE[0] * zoom),
-                        height=int(config.TRANSFORM.TEST_SIZE[1] * zoom),
-                        p=1.0,
-                        always_apply=True)
         ]
+
+    size_scale = config.TRANSFORM.SIZE_SCALE
+    if size_scale != 1.0:
+        # append resizing
+        augmentation.append(
+            albu.Resize(width=int(base_width * size_scale),
+                        height=int(base_height * size_scale),
+                        always_apply=True))
+
     return albu.Compose(augmentation)
 
 

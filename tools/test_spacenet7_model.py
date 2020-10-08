@@ -77,10 +77,12 @@ def main():
                 orig_h = original_heights[batch_idx].item()
                 orig_w = original_widths[batch_idx].item()
 
-                # resize
-                pred = pred.transpose(1, 2, 0)  # CHW -> HWC
-                pred = cv2.resize(pred, dsize=(test_width, test_height))
-                pred = pred.transpose(2, 0, 1)  # HWC -> CHW
+                # resize (only when resize tta or input resizing is applied)
+                _, pred_height, pred_width = pred.shape
+                if (pred_width != test_width) or (pred_height != test_height):
+                    pred = pred.transpose(1, 2, 0)  # CHW -> HWC
+                    pred = cv2.resize(pred, dsize=(test_width, test_height))
+                    pred = pred.transpose(2, 0, 1)  # HWC -> CHW
 
                 # store predictions into the buffer
                 predictions_averaged[
