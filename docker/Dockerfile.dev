@@ -83,9 +83,10 @@ RUN pip install gitpython tensorboard tensorboardX lightgbm==2.3.1 geomet==0.2.1
 RUN pip install seaborn  # required to run notebooks under notebooks/
 RUN pip install imagecodecs  # required for Planet files
 
+# commented out to avoid nodejs error
 # to show tqdm progress bar on jupyter lab nicely
-RUN conda install -n solaris -y -c conda-forge nodejs
-RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager
+#RUN conda install -n solaris -y -c conda-forge nodejs
+#RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager
 
 # add a jupyter kernel for the conda environment in case it's wanted
 RUN source activate solaris && python -m ipykernel.kernelspec \
