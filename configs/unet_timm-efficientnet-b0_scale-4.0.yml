@@ -1,6 +1,6 @@
 MODEL:
     ARCHITECTURE: unet
-    BACKBONE: 'timm-efficientnet-b2'
+    BACKBONE: 'timm-efficientnet-b0'
 DATALOADER:
     TRAIN_BATCH_SIZE: 8
     VAL_BATCH_SIZE: 1
