@@ -2,6 +2,14 @@
 
 motokimura's solution to SpaceNet7 challenge
 
+## Instructions for Final Scoring
+
+See [INSTRUCTION.md](INSTRUCTION.md).
+
+**Sections below are only for the model development phase.**
+
+**Please ignore the sections below in the final testing/scoring phase.**
+
 ## Instructions for Model Development
 
 This section provides instructions for the model development phase.
