@@ -30,8 +30,7 @@ def main():
     print(config)
     print("")
 
-    epoch_to_start_val = config.EVAL.EPOCH_TO_START_VAL
-    assert config.SOLVER.EPOCHS > epoch_to_start_val
+    assert config.SOLVER.EPOCHS > config.EVAL.EPOCH_TO_START_VAL
 
     # prepare directories to output log/weight files
     exp_subdir = experiment_subdir(config.EXP_ID)
@@ -113,7 +112,8 @@ def main():
         for k, v in train_logs.items():
             tblogger.add_scalar(f"split_{split_id}/train/{k}", v, epoch)
 
-        if epoch >= config.EVAL.EPOCH_TO_START_VAL:
+        if (epoch >= config.EVAL.EPOCH_TO_START_VAL) and (
+                epoch % config.EVAL.VAL_INTERVAL_EPOCH == 0):
             # run val for 1 epoch
             val_logs = val_epoch.run(val_dataloader)
 
@@ -128,7 +128,12 @@ def main():
                            os.path.join(weight_dir, weight_best_filename()))
                 print("Best val score updated!")
         else:
-            print(f"Skip val until epoch {epoch_to_start_val}")
+            if epoch < config.EVAL.EPOCH_TO_START_VAL:
+                print(f"Skip val until epoch {config.EVAL.EPOCH_TO_START_VAL}")
+            elif epoch % config.EVAL.VAL_INTERVAL_EPOCH != 0:
+                print(
+                    f"Skip val since val interval is {config.EVAL.VAL_INTERVAL_EPOCH}"
+                )
 
         # update lr for the next epoch
         lr_scheduler.step()

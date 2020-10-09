@@ -78,6 +78,7 @@ _C.EVAL.METRICS = [
 ]  # ['iou']
 _C.EVAL.MAIN_METRIC = 'iou/building_footprint'
 _C.EVAL.EPOCH_TO_START_VAL = 0
+_C.EVAL.VAL_INTERVAL_EPOCH = 1
 
 # Misc
 _C.LOG_ROOT = '/logs'
