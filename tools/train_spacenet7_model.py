@@ -132,7 +132,7 @@ def main():
                 print(f"Skip val until epoch {config.EVAL.EPOCH_TO_START_VAL}")
             elif epoch % config.EVAL.VAL_INTERVAL_EPOCH != 0:
                 print(
-                    f"Skip val since val interval is {config.EVAL.VAL_INTERVAL_EPOCH}"
+                    f"Skip val since val interval is set to {config.EVAL.VAL_INTERVAL_EPOCH}"
                 )
 
         # update lr for the next epoch
