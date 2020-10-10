@@ -73,9 +73,9 @@ def get_test_dataloader(config, tta_resize_wh=None):
     # get full paths to image files
     if config.TEST_TO_VAL:
         # use val split for test.
-        split_id = config.INPUT.TRAIN_VAL_SPLIT_ID
-        data_list_path = os.path.join(config.INPUT.TRAIN_VAL_SPLIT_DIR,
-                                      val_list_filename(split_id))
+        data_list_path = os.path.join(
+            config.INPUT.TRAIN_VAL_SPLIT_DIR,
+            val_list_filename(config.INPUT.TRAIN_VAL_SPLIT_ID))
         with open(data_list_path) as f:
             data_list = json.load(f)
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import os.path
 import timeit
 
@@ -10,7 +11,8 @@ from skimage import io
 from spacenet7_model.configs import load_config
 from spacenet7_model.utils import (dump_prediction_to_png, ensemble_subdir,
                                    experiment_subdir, get_aoi_from_path,
-                                   get_image_paths, load_prediction_from_png)
+                                   get_image_paths, load_prediction_from_png,
+                                   val_list_filename)
 from tqdm import tqdm
 
 if __name__ == '__main__':
@@ -21,7 +23,18 @@ if __name__ == '__main__':
     assert len(config.ENSEMBLE_EXP_IDS) >= 1
     N = len(config.ENSEMBLE_EXP_IDS)
 
-    image_paths = get_image_paths(config.INPUT.TEST_DIR)
+    # get full paths to image files
+    if config.TEST_TO_VAL:
+        # use val split for test.
+        data_list_path = os.path.join(
+            config.INPUT.TRAIN_VAL_SPLIT_DIR,
+            val_list_filename(config.INPUT.TRAIN_VAL_SPLIT_ID))
+        with open(data_list_path) as f:
+            data_list = json.load(f)
+        image_paths = [data['image_masked'] for data in data_list]
+    else:
+        # use test data for test (default).
+        image_paths = get_image_paths(config.INPUT.TEST_DIR)
 
     subdir = ensemble_subdir(config.ENSEMBLE_EXP_IDS)
     out_root = os.path.join(config.ENSEMBLED_PREDICTION_ROOT, subdir)
