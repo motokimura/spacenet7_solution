@@ -103,7 +103,8 @@ _C.WATERSHED_MIN_AREA_PIXEL = 6.0  # for 'watershed'  # XXX: smaller may be bett
 _C.WATERSHED_SEED_MIN_AREA_PIXEL = 0.0  # for 'watershed'
 _C.TRACKING_MIN_IOU = 0.1  # XXX: smaller may be better
 _C.EXP_ID = 9999  # 0~9999
-_C.ENSEMBLE_EXP_IDS = []
+_C.ENSEMBLE_EXP_IDS = []  # e.g., [0, 1, 2, 3, 4]
+_C.ENSEMBLE_WEIGHTS = []  # e.g., [1, 0.5, 0.5, 0.5]
 
 
 def get_default_config():

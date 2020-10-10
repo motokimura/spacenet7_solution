@@ -23,6 +23,14 @@ if __name__ == '__main__':
     assert len(config.ENSEMBLE_EXP_IDS) >= 1
     N = len(config.ENSEMBLE_EXP_IDS)
 
+    # prepare ensemble weights
+    if len(config.ENSEMBLE_WEIGHTS) == 0:
+        weights = np.ones(shape=(N))
+    else:
+        assert len(config.ENSEMBLE_WEIGHTS) == N
+        weights = np.array(config.ENSEMBLE_WEIGHTS)
+    weights = weights / weights.sum()
+
     # get full paths to image files
     if config.TEST_TO_VAL:
         # use val split for test.
@@ -57,7 +65,7 @@ if __name__ == '__main__':
         out_dir = os.path.join(out_root, aoi)
         os.makedirs(out_dir, exist_ok=True)
 
-        for exp_id in config.ENSEMBLE_EXP_IDS:
+        for exp_id, weight in zip(config.ENSEMBLE_EXP_IDS, weights):
             exp_subdir = experiment_subdir(exp_id)
             score_array = load_prediction_from_png(
                 os.path.join(config.PREDICTION_ROOT, exp_subdir, aoi,
@@ -65,9 +73,8 @@ if __name__ == '__main__':
                 n_channels=len(config.INPUT.CLASSES))
             score_array[:, np.logical_not(roi_mask)] = 0
             assert score_array.min() >= 0 and score_array.max() <= 1
-            ensembled_score += score_array
+            ensembled_score += score_array * weight
 
-        ensembled_score = ensembled_score / N
         assert ensembled_score.min() >= 0 and ensembled_score.max() <= 1
         dump_prediction_to_png(os.path.join(out_dir, array_filename),
                                ensembled_score)
