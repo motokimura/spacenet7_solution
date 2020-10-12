@@ -68,6 +68,6 @@ docker run ${RUNTIME} -it --rm --ipc=host \
 	-v ${VAL_PREDICTION_DIR}:/val_predictions \
 	-v ${VAL_ENSEMBLED_PREDICTION_DIR}:/val_ensembled_predictions \
 	-v ${VAL_POLY_DIR}:/val_polygons \
-	-v ${VAL_TRACKED_POLY_DIR}:/val_tracked_polygons
+	-v ${VAL_TRACKED_POLY_DIR}:/val_tracked_polygons \
 	--name ${CONTAINER} \
 	${IMAGE} /bin/bash
