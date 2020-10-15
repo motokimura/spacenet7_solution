@@ -448,6 +448,8 @@ def track_footprint_identifiers(json_dir,
                                 iou_field='iou_score',
                                 id_field='Id',
                                 reverse_order=False,
+                                num_next_frames=0,
+                                min_iou_frames=0.5,
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
@@ -459,6 +461,8 @@ def track_footprint_identifiers(json_dir,
         iou_field (str, optional): [description]. Defaults to 'iou_score'.
         id_field (str, optional): [description]. Defaults to 'Id'.
         reverse_order (bool, optional): [description]. Defaults to False.
+        num_next_frames (int, optional): [description]. Defaults to 0.
+        min_iou_frames (float, optional): [description]. Defaults to 0.5.
         verbose (bool, optional): [description]. Defaults to True.
         super_verbose (bool, optional): [description]. Defaults to False.
 
@@ -474,6 +478,10 @@ def track_footprint_identifiers(json_dir,
 
     import geopandas as gpd
     import numpy as np
+
+    assert num_next_frames in [
+        0, 1
+    ], 'implementation for num_next_frames > 1 is not yet ready'
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -532,6 +540,15 @@ def track_footprint_identifiers(json_dir,
         # reorder columns (if needed)
         gdf_now = gdf_now[gdf_master_columns]
         id_set = set([])
+
+        # XXX: motokimura added this to the baseline
+        if num_next_frames > 0:
+            # gdf next
+            if j == len(json_files) - 1:
+                gdf_next = None  # gdf_now is the last
+            else:
+                gdf_next = gpd.read_file(
+                    os.path.join(json_dir, json_files[j + 1]))
 
         if verbose:
             print("\n")
@@ -636,15 +653,34 @@ def track_footprint_identifiers(json_dir,
                                 "trying to add an id that already exists, returning!"
                             )
                             return
-                        gdf_now.loc[pred_row.name, iou_field] = 0
-                        gdf_now.loc[pred_row.name, id_field] = new_id
-                        id_set.add(new_id)
-                        # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                        gdf_master_Out.loc[new_id] = [
-                            new_id, 0, pred_poly.area, pred_poly
-                        ]
-                        new_id += 1
-                        n_new += 1
+
+                        # XXX: motokimura added this to the baseline
+                        if num_next_frames > 0 and gdf_next is not None:
+                            # check the match b/w pred_poly and next frame
+                            iou_GDF = calculate_iou(pred_poly, gdf_next)
+                            if not iou_GDF.empty(
+                            ) and iou_GDF['iou_score'].max() >= min_iou_frames:
+                                gdf_now.loc[pred_row.name, iou_field] = 0
+                                gdf_now.loc[pred_row.name, id_field] = new_id
+                                id_set.add(new_id)
+                                # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                                gdf_master_Out.loc[new_id] = [
+                                    new_id, 0, pred_poly.area, pred_poly
+                                ]
+                                new_id += 1
+                                n_new += 1
+                            else:
+                                gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                        else:
+                            gdf_now.loc[pred_row.name, iou_field] = 0
+                            gdf_now.loc[pred_row.name, id_field] = new_id
+                            id_set.add(new_id)
+                            # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                            gdf_master_Out.loc[new_id] = [
+                                new_id, 0, pred_poly.area, pred_poly
+                            ]
+                            new_id += 1
+                            n_new += 1
 
                 else:
                     # no match (same exact code as right above)
@@ -656,15 +692,34 @@ def track_footprint_identifiers(json_dir,
                             "trying to add an id that already exists, returning!"
                         )
                         return
-                    gdf_now.loc[pred_row.name, iou_field] = 0
-                    gdf_now.loc[pred_row.name, id_field] = new_id
-                    id_set.add(new_id)
-                    # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                    gdf_master_Out.loc[new_id] = [
-                        new_id, 0, pred_poly.area, pred_poly
-                    ]
-                    new_id += 1
-                    n_new += 1
+
+                    # XXX: motokimura added this to the baseline
+                    if num_next_frames > 0 and gdf_next is not None:
+                        # check the match b/w pred_poly and next frame
+                        iou_GDF = calculate_iou(pred_poly, gdf_next)
+                        if not iou_GDF.empty(
+                        ) and iou_GDF['iou_score'].max() >= min_iou_frames:
+                            gdf_now.loc[pred_row.name, iou_field] = 0
+                            gdf_now.loc[pred_row.name, id_field] = new_id
+                            id_set.add(new_id)
+                            # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                            gdf_master_Out.loc[new_id] = [
+                                new_id, 0, pred_poly.area, pred_poly
+                            ]
+                            new_id += 1
+                            n_new += 1
+                        else:
+                            gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                    else:
+                        gdf_now.loc[pred_row.name, iou_field] = 0
+                        gdf_now.loc[pred_row.name, id_field] = new_id
+                        id_set.add(new_id)
+                        # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                        gdf_master_Out.loc[new_id] = [
+                            new_id, 0, pred_poly.area, pred_poly
+                        ]
+                        new_id += 1
+                        n_new += 1
 
         # print("gdf_now:", gdf_now)
         gdf_dict[f] = gdf_now
