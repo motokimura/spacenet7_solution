@@ -541,7 +541,6 @@ def track_footprint_identifiers(json_dir,
         gdf_now = gdf_now[gdf_master_columns]
         id_set = set([])
 
-        # XXX: motokimura added this to the baseline
         if num_next_frames > 0:
             # gdf next
             if j == len(json_files) - 1:
@@ -556,6 +555,20 @@ def track_footprint_identifiers(json_dir,
             print("  ", "gdf_now.columns:", gdf_now.columns)
 
         if j == 0:
+            # XXX: motokimura added this to the baseline
+            n_dropped = 0
+            if num_next_frames > 0 and gdf_next is not None:
+                for pred_idx, pred_row in gdf_now.iterrows():
+                    pred_poly = pred_row.geometry
+                    # check the match b/w pred_poly and next frame
+                    iou_GDF = calculate_iou(pred_poly, gdf_next)
+                    if not iou_GDF.empty and iou_GDF['iou_score'].max(
+                    ) >= min_iou_frames:
+                        pass
+                    else:
+                        gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                        n_dropped += 1
+
             # Establish initial footprints at Epoch0
             # set id
             gdf_now[id_field] = gdf_now.index.values
@@ -584,6 +597,7 @@ def track_footprint_identifiers(json_dir,
             idx = 0
             n_new = 0
             n_matched = 0
+            n_dropped = 0
             for pred_idx, pred_row in gdf_now.iterrows():
                 if verbose:
                     if (idx % 1000) == 0:
@@ -671,6 +685,7 @@ def track_footprint_identifiers(json_dir,
                                 n_new += 1
                             else:
                                 gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                                n_dropped += 1
                         else:
                             gdf_now.loc[pred_row.name, iou_field] = 0
                             gdf_now.loc[pred_row.name, id_field] = new_id
@@ -710,6 +725,7 @@ def track_footprint_identifiers(json_dir,
                             n_new += 1
                         else:
                             gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                            n_dropped += 1
                     else:
                         gdf_now.loc[pred_row.name, iou_field] = 0
                         gdf_now.loc[pred_row.name, id_field] = new_id
@@ -733,7 +749,8 @@ def track_footprint_identifiers(json_dir,
             open(output_path, 'a').close()
 
         if verbose:
-            print("  ", "N_new, N_matched:", n_new, n_matched)
+            print("  ", "N_new, N_matched, N_dropped:", n_new, n_matched,
+                  n_dropped)
 
 
 def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
