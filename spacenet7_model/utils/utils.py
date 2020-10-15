@@ -658,8 +658,8 @@ def track_footprint_identifiers(json_dir,
                         if num_next_frames > 0 and gdf_next is not None:
                             # check the match b/w pred_poly and next frame
                             iou_GDF = calculate_iou(pred_poly, gdf_next)
-                            if not iou_GDF.empty(
-                            ) and iou_GDF['iou_score'].max() >= min_iou_frames:
+                            if not iou_GDF.empty and iou_GDF['iou_score'].max(
+                            ) >= min_iou_frames:
                                 gdf_now.loc[pred_row.name, iou_field] = 0
                                 gdf_now.loc[pred_row.name, id_field] = new_id
                                 id_set.add(new_id)
@@ -697,8 +697,8 @@ def track_footprint_identifiers(json_dir,
                     if num_next_frames > 0 and gdf_next is not None:
                         # check the match b/w pred_poly and next frame
                         iou_GDF = calculate_iou(pred_poly, gdf_next)
-                        if not iou_GDF.empty(
-                        ) and iou_GDF['iou_score'].max() >= min_iou_frames:
+                        if not iou_GDF.empty and iou_GDF['iou_score'].max(
+                        ) >= min_iou_frames:
                             gdf_now.loc[pred_row.name, iou_field] = 0
                             gdf_now.loc[pred_row.name, id_field] = new_id
                             id_set.add(new_id)
