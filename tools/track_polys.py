@@ -36,6 +36,8 @@ if __name__ == '__main__':
     iou_field = 'iou_score'
     id_field = 'Id'
     reverse_order = False
+    num_next_frames = 0
+    min_iou_frames = 0.5
     verbose = True
     super_verbose = False
     n_thread = 8
@@ -52,7 +54,7 @@ if __name__ == '__main__':
         input_args.append([
             track_footprint_identifiers, input_dir, json_dir,
             config.TRACKING_MIN_IOU, iou_field, id_field, reverse_order,
-            verbose, super_verbose
+            num_next_frames, min_iou_frames, verbose, super_verbose
         ])
 
     # run multiprocessing
