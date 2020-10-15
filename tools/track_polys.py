@@ -36,8 +36,8 @@ if __name__ == '__main__':
     iou_field = 'iou_score'
     id_field = 'Id'
     reverse_order = False
-    num_next_frames = 0
-    min_iou_frames = 0.5
+    num_next_frames = config.TRACKING_NUM_AHEAD_FRAMES
+    min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
     verbose = True
     super_verbose = False
     n_thread = 8
