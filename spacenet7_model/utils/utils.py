@@ -442,6 +442,25 @@ def calculate_iou(pred_poly, test_data_GDF):
     return iou_GDF
 
 
+def __new_poly_is_valid(new_poly, gdfs_next, min_iou_frames):
+    """[summary]
+
+    Args:
+        new_poly ([type]): [description]
+        gdfs_next ([type]): [description]
+        min_iou_frames ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    assert len(gdfs_next) > 0
+    for gdf_next in gdfs_next:
+        iou_GDF = calculate_iou(new_poly, gdf_next)
+        if not iou_GDF.empty and iou_GDF['iou_score'].max() >= min_iou_frames:
+            return True  # at least one match
+    return False  # no match
+
+
 def track_footprint_identifiers(json_dir,
                                 out_dir,
                                 min_iou=0.25,
@@ -478,10 +497,6 @@ def track_footprint_identifiers(json_dir,
 
     import geopandas as gpd
     import numpy as np
-
-    assert num_next_frames in [
-        0, 1
-    ], 'implementation for num_next_frames > 1 is not yet ready'
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -541,29 +556,28 @@ def track_footprint_identifiers(json_dir,
         gdf_now = gdf_now[gdf_master_columns]
         id_set = set([])
 
-        if num_next_frames > 0:
-            # gdf next
-            if j == len(json_files) - 1:
-                gdf_next = None  # gdf_now is the last
-            else:
-                gdf_next = gpd.read_file(
-                    os.path.join(json_dir, json_files[j + 1]))
-
         if verbose:
             print("\n")
             print("", j, "file_name:", f)
             print("  ", "gdf_now.columns:", gdf_now.columns)
 
+        # XXX: motokimura added this to the baseline
+        # prepare GeoDataFrames for next frames
+        gdfs_next = []
+        for k in range(j + 1, min((j + 1) + num_next_frames, len(json_files))):
+            gdfs_next.append(
+                gpd.read_file(os.path.join(json_dir, json_files[k])))
+        if num_next_frames == 0:
+            assert len(gdfs_next) == 0
+
         if j == 0:
             # XXX: motokimura added this to the baseline
             n_dropped = 0
-            if num_next_frames > 0 and gdf_next is not None:
+            if len(gdfs_next) > 0:
                 for pred_idx, pred_row in gdf_now.iterrows():
-                    pred_poly = pred_row.geometry
-                    # check the match b/w pred_poly and next frame
-                    iou_GDF = calculate_iou(pred_poly, gdf_next)
-                    if not iou_GDF.empty and iou_GDF['iou_score'].max(
-                    ) >= min_iou_frames:
+                    # check the match b/w pred_poly and next frames
+                    if __new_poly_is_valid(pred_row.geometry, gdfs_next,
+                                           min_iou_frames):
                         pass
                     else:
                         gdf_now = gdf_now.drop(pred_row.name, axis=0)
@@ -669,11 +683,10 @@ def track_footprint_identifiers(json_dir,
                             return
 
                         # XXX: motokimura added this to the baseline
-                        if num_next_frames > 0 and gdf_next is not None:
-                            # check the match b/w pred_poly and next frame
-                            iou_GDF = calculate_iou(pred_poly, gdf_next)
-                            if not iou_GDF.empty and iou_GDF['iou_score'].max(
-                            ) >= min_iou_frames:
+                        if len(gdfs_next) > 0:
+                            # check the match b/w pred_poly and next frames
+                            if __new_poly_is_valid(pred_poly, gdfs_next,
+                                                   min_iou_frames):
                                 gdf_now.loc[pred_row.name, iou_field] = 0
                                 gdf_now.loc[pred_row.name, id_field] = new_id
                                 id_set.add(new_id)
@@ -709,11 +722,10 @@ def track_footprint_identifiers(json_dir,
                         return
 
                     # XXX: motokimura added this to the baseline
-                    if num_next_frames > 0 and gdf_next is not None:
-                        # check the match b/w pred_poly and next frame
-                        iou_GDF = calculate_iou(pred_poly, gdf_next)
-                        if not iou_GDF.empty and iou_GDF['iou_score'].max(
-                        ) >= min_iou_frames:
+                    if len(gdfs_next) > 0:
+                        # check the match b/w pred_poly and next frames
+                        if __new_poly_is_valid(pred_poly, gdfs_next,
+                                               min_iou_frames):
                             gdf_now.loc[pred_row.name, iou_field] = 0
                             gdf_now.loc[pred_row.name, id_field] = new_id
                             id_set.add(new_id)
