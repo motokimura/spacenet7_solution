@@ -449,7 +449,7 @@ def track_footprint_identifiers(json_dir,
                                 id_field='Id',
                                 reverse_order=False,
                                 num_next_frames=0,
-                                min_iou_frames=0.5,
+                                min_iou_frames=0.25,
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
