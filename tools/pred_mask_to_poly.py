@@ -10,7 +10,8 @@ from spacenet7_model.utils import (ensemble_subdir, get_subdirs,
                                    load_prediction_from_png,
                                    compute_building_score,
                                    gen_building_polys_using_contours,
-                                   gen_building_polys_using_watershed)
+                                   gen_building_polys_using_watershed,
+                                   gen_building_polys_using_watershed_2)
 from tqdm import tqdm
 
 if __name__ == '__main__':
@@ -74,6 +75,20 @@ if __name__ == '__main__':
                     config.WATERSHED_MIN_AREA_PIXEL,
                     config.WATERSHED_SEED_THRESH,
                     config.WATERSHED_MAIN_THRESH,
+                    output_path=output_path)
+            elif config.METHOD_TO_MAKE_POLYGONS == 'watershed2':
+                polys = gen_building_polys_using_watershed_2(
+                    footprint_score,
+                    boundary_score,
+                    contact_score,
+                    config.WATERSHED2_SEED_MIN_AREA_PIXEL,
+                    config.WATERSHED2_MIN_AREA_PIXEL,
+                    config.WATERSHED2_SEED_THRESH,
+                    config.WATERSHED2_MAIN_THRESH,
+                    config.WATERSHED2_SEED_BOUNDARY_SUBTRACT_COEFF,
+                    config.WATERSHED2_SEED_CONTACT_SUBTRACT_COEFF,
+                    config.WATERSHED2_BOUNDARY_SUBTRACT_COEFF,
+                    config.WATERSHED2_CONTACT_SUBTRACT_COEFF,
                     output_path=output_path)
             else:
                 raise ValueError()
