@@ -325,17 +325,18 @@ def __remove_small_regions(pred, min_area):
 def __mask_to_polys(mask):
     """[summary]
 
-        Args:
-            mask ([type]): [description]
+    Args:
+        mask ([type]): [description]
 
-        Returns:
-            [type]: [description]
-        """
+    Returns:
+        [type]: [description]
+    """
+    import numpy as np
     import pandas as pd
     from rasterio import features
     from shapely import ops, geometry
 
-    shapes = features.shapes(y_pred.astype(np.int16), mask > 0)
+    shapes = features.shapes(mask.astype(np.int16), mask > 0)
     mp = ops.cascaded_union(
         geometry.MultiPolygon(
             [geometry.shape(shape) for shape, value in shapes]))
