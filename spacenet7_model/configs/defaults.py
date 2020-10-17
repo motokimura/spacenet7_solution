@@ -116,6 +116,7 @@ _C.TRACKING_MIN_IOU = 0.1  # XXX: smaller may be better
 _C.TRACKING_NUM_AHEAD_FRAMES = 0
 _C.TRACKING_MIN_IOU_NEW_BUILDING = 0.25  # valid when TRACKING_NUM_AHEAD_FRAMES > 0. XXX: not optimized
 _C.TRACKING_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
+_C.TRACKING_REVERSE = False
 
 _C.EXP_ID = 9999  # 0~9999
 
