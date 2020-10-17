@@ -249,7 +249,7 @@ def compute_building_score(pr_score_footprint, pr_score_boundary,
     Returns:
         [type]: [description]
     """
-    pr_score_building = pr_score_footprint
+    pr_score_building = pr_score_footprint.copy()
     pr_score_building *= (1.0 - alpha * pr_score_boundary)
     pr_score_building *= (1.0 - beta * pr_score_contact)
     return pr_score_building.clip(min=0.0, max=1.0)
@@ -303,6 +303,55 @@ def gen_building_polys_using_contours(building_score,
     return polygon_gdf
 
 
+def __remove_small_regions(pred, min_area):
+    """[summary]
+
+    Args:
+        pred ([type]): [description]
+        min_area ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    from skimage import measure
+
+    props = measure.regionprops(pred)
+    for i in range(len(props)):
+        if props[i].area < min_area:
+            pred[pred == i + 1] = 0
+    return measure.label(pred, connectivity=2, background=0)
+
+
+def __mask_to_polys(mask):
+    """[summary]
+
+    Args:
+        mask ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import numpy as np
+    import pandas as pd
+    from rasterio import features
+    from shapely import ops, geometry
+
+    shapes = features.shapes(mask.astype(np.int16), mask > 0)
+    mp = ops.cascaded_union(
+        geometry.MultiPolygon(
+            [geometry.shape(shape) for shape, value in shapes]))
+
+    if isinstance(mp, geometry.Polygon):
+        polygon_gdf = pd.DataFrame({
+            'geometry': [mp],
+        })
+    else:
+        polygon_gdf = pd.DataFrame({
+            'geometry': [p for p in mp],
+        })
+    return polygon_gdf
+
+
 def gen_building_polys_using_watershed(building_score,
                                        seed_min_area_pix,
                                        min_area_pix,
@@ -327,55 +376,9 @@ def gen_building_polys_using_watershed(building_score,
     from skimage import measure
     from skimage.morphology import watershed
 
-    def remove_small_regions(pred, min_area):
-        """[summary]
-
-        Args:
-            pred ([type]): [description]
-            min_area ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        from skimage import measure
-
-        props = measure.regionprops(pred)
-        for i in range(len(props)):
-            if props[i].area < min_area:
-                pred[pred == i + 1] = 0
-        return measure.label(pred, connectivity=2, background=0)
-
-    def mask_to_polys(mask):
-        """[summary]
-
-        Args:
-            mask ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        import pandas as pd
-        from rasterio import features
-        from shapely import ops, geometry
-
-        shapes = features.shapes(y_pred.astype(np.int16), mask > 0)
-        mp = ops.cascaded_union(
-            geometry.MultiPolygon(
-                [geometry.shape(shape) for shape, value in shapes]))
-
-        if isinstance(mp, geometry.Polygon):
-            polygon_gdf = pd.DataFrame({
-                'geometry': [mp],
-            })
-        else:
-            polygon_gdf = pd.DataFrame({
-                'geometry': [p for p in mp],
-            })
-        return polygon_gdf
-
     av_pred = (building_score > seed_score_thresh).astype(np.uint8)
     y_pred = measure.label(av_pred, connectivity=2, background=0)
-    y_pred = remove_small_regions(y_pred, seed_min_area_pix)
+    y_pred = __remove_small_regions(y_pred, seed_min_area_pix)
 
     nucl_msk = 1 - building_score
     nucl_msk = (nucl_msk * 65535).astype('uint16')
@@ -383,8 +386,77 @@ def gen_building_polys_using_watershed(building_score,
                        y_pred,
                        mask=(building_score > main_score_thresh),
                        watershed_line=True)
-    y_pred = remove_small_regions(y_pred, min_area_pix)
-    polygon_gdf = mask_to_polys(y_pred)
+    y_pred = __remove_small_regions(y_pred, min_area_pix)
+    polygon_gdf = __mask_to_polys(y_pred)
+
+    if output_path is not None:
+        if len(polygon_gdf) > 0:
+            polygon_gdf = gpd.GeoDataFrame(polygon_gdf)
+            polygon_gdf.to_file(output_path, driver='GeoJSON')
+        else:
+            save_empty_geojson(output_path)
+
+    return polygon_gdf
+
+
+def gen_building_polys_using_watershed_2(footprint_score,
+                                         boundary_score,
+                                         contact_score,
+                                         seed_min_area_pix,
+                                         min_area_pix,
+                                         seed_score_thresh,
+                                         main_score_thresh,
+                                         seed_boundary_weight=1.0,
+                                         seed_contact_weight=1.0,
+                                         boundary_weight=0.0,
+                                         contact_weight=1.0,
+                                         output_path=None):
+    """Watershed by zbigniewwojna
+    https://github.com/SpaceNetChallenge/SpaceNet_SAR_Buildings_Solutions/blob/master/1-zbigniewwojna/main.py#L570
+
+    Args:
+        footprint_score ([type]): [description]
+        boundary_score ([type]): [description]
+        contact_score ([type]): [description]
+        seed_min_area_pix ([type]): [description]
+        min_area_pix ([type]): [description]
+        seed_score_thresh ([type]): [description]
+        main_score_thresh ([type]): [description]
+        seed_boundary_weight (float, optional): [description]. Defaults to 1.0.
+        seed_contact_weight (float, optional): [description]. Defaults to 1.0.
+        boundary_weight (float, optional): [description]. Defaults to 0.0.
+        contact_weight (float, optional): [description]. Defaults to 1.0.
+        output_path ([type], optional): [description]. Defaults to None.
+
+    Returns:
+        [type]: [description]
+    """
+    import geopandas as gpd
+    import numpy as np
+    from skimage import measure
+    from skimage.morphology import watershed
+
+    seed_building_score = compute_building_score(footprint_score,
+                                                 boundary_score, contact_score,
+                                                 seed_boundary_weight,
+                                                 seed_contact_weight)
+
+    av_pred = (seed_building_score > seed_score_thresh).astype(np.uint8)
+    y_pred = measure.label(av_pred, connectivity=2, background=0)
+    y_pred = __remove_small_regions(y_pred, seed_min_area_pix)
+
+    building_score = compute_building_score(footprint_score, boundary_score,
+                                            contact_score, boundary_weight,
+                                            contact_weight)
+
+    nucl_msk = 1 - building_score
+    nucl_msk = (nucl_msk * 65535).astype('uint16')
+    y_pred = watershed(nucl_msk,
+                       y_pred,
+                       mask=(building_score > main_score_thresh),
+                       watershed_line=True)
+    y_pred = __remove_small_regions(y_pred, min_area_pix)
+    polygon_gdf = __mask_to_polys(y_pred)
 
     if output_path is not None:
         if len(polygon_gdf) > 0:
