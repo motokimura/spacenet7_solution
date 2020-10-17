@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # some parameters
     iou_field = 'iou_score'
     id_field = 'Id'
-    reverse_order = False
+    reverse_order = config.TRACKING_REVERSE
     num_next_frames = config.TRACKING_NUM_AHEAD_FRAMES
     min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
     verbose = True
