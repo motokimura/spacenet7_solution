@@ -106,10 +106,10 @@ _C.WATERSHED_SEED_MIN_AREA_PIXEL = 0.0  # for 'watershed'
 _C.WATERSHED2_MAIN_THRESH = 0.5  # for 'watershed2'  # XXX: not optimized
 _C.WATERSHED2_SEED_THRESH = 0.75  # for 'watershed2'  # XXX: not optimized
 _C.WATERSHED2_MIN_AREA_PIXEL = 6.0  # for 'watershed2'  # XXX: not optimized
-_C.WATERSHED2_SEED_MIN_AREA_PIXEL = 0.0  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_SEED_MIN_AREA_PIXEL = 3.0  # for 'watershed2'  # XXX: not optimized
 _C.WATERSHED2_BOUNDARY_SUBTRACT_COEFF = 0.00  # for 'watershed2'  # XXX: not optimized
 _C.WATERSHED2_CONTACT_SUBTRACT_COEFF = 1.00  # for 'watershed2'  # XXX: not optimized
-_C.WATERSHED2_SEED_BOUNDARY_SUBTRACT_COEFF = 1.00  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_SEED_BOUNDARY_SUBTRACT_COEFF = 0.50  # for 'watershed2'  # XXX: not optimized
 _C.WATERSHED2_SEED_CONTACT_SUBTRACT_COEFF = 1.00  # for 'watershed2'  # XXX: not optimized
 
 _C.TRACKING_MIN_IOU = 0.1  # XXX: smaller may be better
