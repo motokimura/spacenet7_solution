@@ -249,7 +249,7 @@ def compute_building_score(pr_score_footprint, pr_score_boundary,
     Returns:
         [type]: [description]
     """
-    pr_score_building = pr_score_footprint
+    pr_score_building = pr_score_footprint.copy()
     pr_score_building *= (1.0 - alpha * pr_score_boundary)
     pr_score_building *= (1.0 - beta * pr_score_contact)
     return pr_score_building.clip(min=0.0, max=1.0)
