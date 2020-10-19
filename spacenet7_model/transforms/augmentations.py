@@ -46,6 +46,9 @@ def get_spacenet7_augmentation(config, is_train, tta_resize_wh=None):
                 _random_brightness,
                 brightness_std=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_STD,
                 p=config.TRANSFORM.TRAIN_RANDOM_BRIGHTNESS_PROB)),
+            # random blur
+            albu.Blur(blur_limit=config.TRANSFORM.TRAIN_BLUR_KERNEL_MAX,
+                      p=config.TRANSFORM.TRAIN_BLUR_PROB),
         ]
 
         resize_width = int(size_scale * base_width)
