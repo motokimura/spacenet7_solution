@@ -147,7 +147,7 @@ if __name__ == '__main__':
 
             # handle padded area and non-ROI area
             roi_mask = roi_masks[i]
-            h, w = roi_mask
+            h, w = roi_mask.shape
             pred_refined = pred_refined[:, :h, :w]
             pred_refined[:, np.logical_not(roi_mask)] = 0
 
