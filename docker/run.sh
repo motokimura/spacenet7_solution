@@ -42,11 +42,13 @@ LOG_DIR=${FEATURE_ROOT}/logs
 CHECKPOINT_DIR=${FEATURE_ROOT}/checkpoints
 PREDICTION_DIR=${FEATURE_ROOT}/predictions
 ENSEMBLED_PREDICTION_DIR=${FEATURE_ROOT}/ensembled_predictions
+REFINED_PREDICTION_DIR=${FEATURE_ROOT}/refined_predictions
 POLY_DIR=${FEATURE_ROOT}/polygons
 TRACKED_POLY_DIR=${FEATURE_ROOT}/tracked_polygons
 SOLUTION_DIR=${FEATURE_ROOT}/solutions
 VAL_PREDICTION_DIR=${FEATURE_ROOT}/val_predictions
 VAL_ENSEMBLED_PREDICTION_DIR=${FEATURE_ROOT}/val_ensembled_predictions
+VAL_REFINED_PREDICTION_DIR=${FEATURE_ROOT}/val_refined_predictions
 VAL_POLY_DIR=${FEATURE_ROOT}/val_polygons
 VAL_TRACKED_POLY_DIR=${FEATURE_ROOT}/val_tracked_polygons
 
@@ -63,10 +65,12 @@ docker run ${RUNTIME} -it --rm --ipc=host \
 	-v ${CHECKPOINT_DIR}:/checkpoints \
 	-v ${PREDICTION_DIR}:/predictions \
 	-v ${ENSEMBLED_PREDICTION_DIR}:/ensembled_predictions \
+	-v ${REFINED_PREDICTION_DIR}:/refined_predictions \
 	-v ${POLY_DIR}:/polygons \
 	-v ${TRACKED_POLY_DIR}:/tracked_polygons \
 	-v ${VAL_PREDICTION_DIR}:/val_predictions \
 	-v ${VAL_ENSEMBLED_PREDICTION_DIR}:/val_ensembled_predictions \
+	-v ${VAL_REFINED_PREDICTION_DIR}:/val_refined_predictions \
 	-v ${VAL_POLY_DIR}:/val_polygons \
 	-v ${VAL_TRACKED_POLY_DIR}:/val_tracked_polygons \
 	--name ${CONTAINER} \

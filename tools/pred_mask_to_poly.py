@@ -22,7 +22,7 @@ if __name__ == '__main__':
     assert len(config.ENSEMBLE_EXP_IDS) >= 1
 
     subdir = ensemble_subdir(config.ENSEMBLE_EXP_IDS)
-    input_root = os.path.join(config.ENSEMBLED_PREDICTION_ROOT, subdir)
+    input_root = os.path.join(config.REFINED_PREDICTION_ROOT, subdir)
     aois = get_subdirs(input_root)
 
     out_root = os.path.join(config.POLY_ROOT, subdir)

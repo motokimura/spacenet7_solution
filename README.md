@@ -92,6 +92,15 @@ ENSEMBLE_EXP_IDS='[9999,9998,9997,9996,9995]'  # previous experiments used for e
 ./tools/ensemble_models.py [--config CONFIG_FILE] ENSEMBLE_EXP_IDS ${ENSEMBLE_EXP_IDS}
 ```
 
+### Refine predicted masks
+
+All commands below have to be executed inside the container.
+
+```
+ENSEMBLE_EXP_IDS='[9999,9998,9997,9996,9995]'  # previous experiments used for ensemble
+./tools/refine_pred_mask.py [--config CONFIG_FILE] ENSEMBLE_EXP_IDS ${ENSEMBLE_EXP_IDS}
+```
+
 ### Convert predicted mask to polygons
 
 All commands below have to be executed inside the container.
@@ -117,6 +126,24 @@ All commands below have to be executed inside the container.
 ```
 EXP_ID=9999  # previous experiment id from which config and weight are loaded
 ./tools/test_spacenet7_model.py --config configs/test_to_val_images.yml --exp_id ${EXP_ID}
+```
+
+### Ensemble segmentation models (val)
+
+All commands below have to be executed inside the container.
+
+```
+ENSEMBLE_EXP_IDS='[9999,]'  # experiment used for the testing
+./tools/ensemble_models.py --config configs/test_to_val_images.yml ENSEMBLE_EXP_IDS ${ENSEMBLE_EXP_IDS}
+```
+
+### Refine predicted masks (val)
+
+All commands below have to be executed inside the container.
+
+```
+ENSEMBLE_EXP_IDS='[9999,]'  # experiment used for the testing
+./tools/refine_pred_mask.py --config configs/test_to_val_images.yml ENSEMBLE_EXP_IDS ${ENSEMBLE_EXP_IDS}
 ```
 
 ### Convert prerdicted mask to polygons (val)
