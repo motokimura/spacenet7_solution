@@ -830,7 +830,7 @@ def track_footprint_identifiers(json_dir,
             gdf_now.to_file(output_path, driver="GeoJSON")
         else:
             print("Empty dataframe, writing empty gdf", output_path)
-            open(output_path, 'a').close()
+            save_empty_geojson(output_path)
 
         if verbose:
             print("  ", "N_new, N_matched, N_dropped:", n_new, n_matched,
@@ -868,9 +868,8 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
                 df = gpd.read_file(json_file)
             except (fiona.errors.DriverError):
                 message = '! Invalid dataframe for %s' % json_file
-                print(message)
-                continue
-                #raise Exception(message)
+                raise Exception(message)
+
             if population == 'ground':
                 file_name_col = df.image_fname.apply(
                     lambda x: os.path.splitext(x)[0])
@@ -879,15 +878,22 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
                     os.path.basename(json_file))[0]
             else:
                 raise Exception('! Invalid population')
-            df = gpd.GeoDataFrame({
-                'filename': file_name_col,
-                'id': df.Id.astype(int),
-                'geometry': df.geometry,
-            })
-            if len(df) == 0:
+
+            if len(df) > 0:
+                df = gpd.GeoDataFrame({
+                    'filename': file_name_col,
+                    'id': df.Id.astype(int),
+                    'geometry': df.geometry,
+                })
+            else:
+                # if no building was found:
                 message = '! Empty dataframe for %s' % json_file
                 print(message)
-                #raise Exception(message)
+                df = gpd.GeoDataFrame({
+                    'filename': file_name_col,
+                    'id': 0,
+                    'geometry': ["POLYGON EMPTY"],
+                })
 
             if first_file:
                 net_df = df
