@@ -110,7 +110,7 @@ if __name__ == '__main__':
 
         # refine each predicted mask with the aggregated mask
         print('refining...')
-        for i, pred_path in tqdm(enumerate(pred_paths)):
+        for i, pred_path in enumerate(tqdm(pred_paths)):
             # compute aggregated mask for footprint
             preds_footprint = preds[:, footprint_channel, :, :]
             pred_aggregated_footprint = compute_aggregated_prediction(
