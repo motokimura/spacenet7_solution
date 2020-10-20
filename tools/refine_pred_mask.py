@@ -99,7 +99,7 @@ if __name__ == '__main__':
             # get pred
             pred = load_prediction_from_png(pred_path,
                                             len(config.INPUT.CLASSES))
-            pred[np.logical_not(roi_mask)] = np.NaN
+            pred[:, np.logical_not(roi_mask)] = np.NaN
             pad_w = config.TRANSFORM.TEST_SIZE[0] - w
             pad_h = config.TRANSFORM.TEST_SIZE[1] - h
             pred = np.pad(pred, ((0, 0), (0, pad_h), (0, pad_w)),
@@ -149,7 +149,7 @@ if __name__ == '__main__':
             roi_mask = roi_masks[i]
             h, w = roi_mask
             pred_refined = pred_refined[:, :h, :w]
-            pred_refined[np.logical_not(roi_mask)] = 0
+            pred_refined[:, np.logical_not(roi_mask)] = 0
 
             # dump
             pred_filename = os.path.basename(pred_path)
