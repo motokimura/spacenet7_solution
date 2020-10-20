@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import multiprocessing as mp
 import os
 import timeit
-from multiprocessing import Pool
 
 import _init_path
 from spacenet7_model.configs import load_config
@@ -35,10 +35,16 @@ if __name__ == '__main__':
     # some parameters
     iou_field = 'iou_score'
     id_field = 'Id'
-    reverse_order = False
+    reverse_order = config.TRACKING_REVERSE
+    num_next_frames = config.TRACKING_NUM_AHEAD_FRAMES
+    min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
+    shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
     verbose = True
     super_verbose = False
-    n_thread = 8
+
+    n_thread = config.TRACKING_NUM_THREADS
+    n_thread = n_thread if n_thread > 0 else mp.cpu_count()
+    print(f'N_thread for multiprocessing: {n_thread}')
 
     # track footprint and save the results as geojson files
     # prepare args and output directories
@@ -52,11 +58,12 @@ if __name__ == '__main__':
         input_args.append([
             track_footprint_identifiers, input_dir, json_dir,
             config.TRACKING_MIN_IOU, iou_field, id_field, reverse_order,
-            verbose, super_verbose
+            num_next_frames, min_iou_frames, shape_update_method, verbose,
+            super_verbose
         ])
 
     # run multiprocessing
-    pool = Pool(processes=n_thread)
+    pool = mp.Pool(processes=n_thread)
     with tqdm(total=len(input_args)) as t:
         for _ in pool.imap_unordered(map_wrapper, input_args):
             t.update(1)

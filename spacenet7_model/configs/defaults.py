@@ -92,18 +92,37 @@ _C.SOLUTION_OUTPUT_PATH = 'none'
 _C.SAVE_CHECKPOINTS = True
 _C.DUMP_GIT_INFO = True
 _C.TEST_TO_VAL = False
-_C.BOUNDARY_SUBTRACT_COEFF = 0.50
-_C.CONTACT_SUBTRACT_COEFF = 1.00
-_C.METHOD_TO_MAKE_POLYGONS = 'watershed'  # ['contours', 'watershed']
+
+_C.METHOD_TO_MAKE_POLYGONS = 'watershed'  # ['contours', 'watershed', 'watershed2']
+_C.BOUNDARY_SUBTRACT_COEFF = 0.50  # for 'contours' and 'watershed'
+_C.CONTACT_SUBTRACT_COEFF = 1.00  # for 'contours' and 'watershed'
 _C.BUILDING_SCORE_THRESH = 0.5  # for 'contours'
 _C.BUILDING_MIM_AREA_PIXEL = 8.0  # for 'contours'
-_C.WATERSHED_MAIN_THRESH = 0.3
-_C.WATERSHED_SEED_THRESH = 0.7
+_C.WATERSHED_MAIN_THRESH = 0.3  # for 'watershed'
+_C.WATERSHED_SEED_THRESH = 0.7  # for 'watershed'
 _C.WATERSHED_MIN_AREA_PIXEL = 6.0  # for 'watershed'  # XXX: smaller may be better
 _C.WATERSHED_SEED_MIN_AREA_PIXEL = 0.0  # for 'watershed'
+
+_C.WATERSHED2_MAIN_THRESH = 0.5  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_SEED_THRESH = 0.75  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_MIN_AREA_PIXEL = 6.0  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_SEED_MIN_AREA_PIXEL = 3.0  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_BOUNDARY_SUBTRACT_COEFF = 0.00  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_CONTACT_SUBTRACT_COEFF = 1.00  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_SEED_BOUNDARY_SUBTRACT_COEFF = 0.50  # for 'watershed2'  # XXX: not optimized
+_C.WATERSHED2_SEED_CONTACT_SUBTRACT_COEFF = 1.00  # for 'watershed2'  # XXX: not optimized
+
 _C.TRACKING_MIN_IOU = 0.1  # XXX: smaller may be better
+_C.TRACKING_NUM_AHEAD_FRAMES = 0
+_C.TRACKING_MIN_IOU_NEW_BUILDING = 0.25  # valid when TRACKING_NUM_AHEAD_FRAMES > 0. XXX: not optimized
+_C.TRACKING_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
+_C.TRACKING_REVERSE = False
+_C.TRACKING_SHAPE_UPDATE_METHOD = 'none'  # ['none', 'latest']
+
 _C.EXP_ID = 9999  # 0~9999
-_C.ENSEMBLE_EXP_IDS = []
+
+_C.ENSEMBLE_EXP_IDS = []  # e.g., [0, 1, 2, 3, 4]
+_C.ENSEMBLE_WEIGHTS = []  # e.g., [1, 0.5, 0.5, 0.5]
 
 
 def get_default_config():

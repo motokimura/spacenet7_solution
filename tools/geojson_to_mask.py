@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+import multiprocessing as mp
 import os
 import timeit
-from multiprocessing import Pool
 
 import numpy as np
 
@@ -41,7 +41,7 @@ def parse_args():
     parser.add_argument('--n_thread',
                         help='number of thread or process of multiprocessing',
                         type=int,
-                        default=8)
+                        default=0)
     return parser.parse_args()
 
 
@@ -102,6 +102,9 @@ if __name__ == '__main__':
 
     args = parse_args()
 
+    n_thread = args.n_thread if args.n_thread > 0 else mp.cpu_count()
+    print(f'N_thread for multiprocessing: {n_thread}')
+
     os.makedirs(args.out_dir, exist_ok=False)
 
     # args to be passed to multiprocessing
@@ -139,7 +142,7 @@ if __name__ == '__main__':
             ])
 
     # run multiprocessing
-    pool = Pool(processes=args.n_thread)
+    pool = mp.Pool(processes=n_thread)
     with tqdm(total=len(input_args)) as t:
         for _ in pool.imap_unordered(map_wrapper, input_args):
             t.update(1)

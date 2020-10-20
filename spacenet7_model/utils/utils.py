@@ -249,7 +249,7 @@ def compute_building_score(pr_score_footprint, pr_score_boundary,
     Returns:
         [type]: [description]
     """
-    pr_score_building = pr_score_footprint
+    pr_score_building = pr_score_footprint.copy()
     pr_score_building *= (1.0 - alpha * pr_score_boundary)
     pr_score_building *= (1.0 - beta * pr_score_contact)
     return pr_score_building.clip(min=0.0, max=1.0)
@@ -303,6 +303,55 @@ def gen_building_polys_using_contours(building_score,
     return polygon_gdf
 
 
+def __remove_small_regions(pred, min_area):
+    """[summary]
+
+    Args:
+        pred ([type]): [description]
+        min_area ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    from skimage import measure
+
+    props = measure.regionprops(pred)
+    for i in range(len(props)):
+        if props[i].area < min_area:
+            pred[pred == i + 1] = 0
+    return measure.label(pred, connectivity=2, background=0)
+
+
+def __mask_to_polys(mask):
+    """[summary]
+
+    Args:
+        mask ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import numpy as np
+    import pandas as pd
+    from rasterio import features
+    from shapely import ops, geometry
+
+    shapes = features.shapes(mask.astype(np.int16), mask > 0)
+    mp = ops.cascaded_union(
+        geometry.MultiPolygon(
+            [geometry.shape(shape) for shape, value in shapes]))
+
+    if isinstance(mp, geometry.Polygon):
+        polygon_gdf = pd.DataFrame({
+            'geometry': [mp],
+        })
+    else:
+        polygon_gdf = pd.DataFrame({
+            'geometry': [p for p in mp],
+        })
+    return polygon_gdf
+
+
 def gen_building_polys_using_watershed(building_score,
                                        seed_min_area_pix,
                                        min_area_pix,
@@ -327,55 +376,9 @@ def gen_building_polys_using_watershed(building_score,
     from skimage import measure
     from skimage.morphology import watershed
 
-    def remove_small_regions(pred, min_area):
-        """[summary]
-
-        Args:
-            pred ([type]): [description]
-            min_area ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        from skimage import measure
-
-        props = measure.regionprops(pred)
-        for i in range(len(props)):
-            if props[i].area < min_area:
-                pred[pred == i + 1] = 0
-        return measure.label(pred, connectivity=2, background=0)
-
-    def mask_to_polys(mask):
-        """[summary]
-
-        Args:
-            mask ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        import pandas as pd
-        from rasterio import features
-        from shapely import ops, geometry
-
-        shapes = features.shapes(y_pred.astype(np.int16), mask > 0)
-        mp = ops.cascaded_union(
-            geometry.MultiPolygon(
-                [geometry.shape(shape) for shape, value in shapes]))
-
-        if isinstance(mp, geometry.Polygon):
-            polygon_gdf = pd.DataFrame({
-                'geometry': [mp],
-            })
-        else:
-            polygon_gdf = pd.DataFrame({
-                'geometry': [p for p in mp],
-            })
-        return polygon_gdf
-
     av_pred = (building_score > seed_score_thresh).astype(np.uint8)
     y_pred = measure.label(av_pred, connectivity=2, background=0)
-    y_pred = remove_small_regions(y_pred, seed_min_area_pix)
+    y_pred = __remove_small_regions(y_pred, seed_min_area_pix)
 
     nucl_msk = 1 - building_score
     nucl_msk = (nucl_msk * 65535).astype('uint16')
@@ -383,8 +386,77 @@ def gen_building_polys_using_watershed(building_score,
                        y_pred,
                        mask=(building_score > main_score_thresh),
                        watershed_line=True)
-    y_pred = remove_small_regions(y_pred, min_area_pix)
-    polygon_gdf = mask_to_polys(y_pred)
+    y_pred = __remove_small_regions(y_pred, min_area_pix)
+    polygon_gdf = __mask_to_polys(y_pred)
+
+    if output_path is not None:
+        if len(polygon_gdf) > 0:
+            polygon_gdf = gpd.GeoDataFrame(polygon_gdf)
+            polygon_gdf.to_file(output_path, driver='GeoJSON')
+        else:
+            save_empty_geojson(output_path)
+
+    return polygon_gdf
+
+
+def gen_building_polys_using_watershed_2(footprint_score,
+                                         boundary_score,
+                                         contact_score,
+                                         seed_min_area_pix,
+                                         min_area_pix,
+                                         seed_score_thresh,
+                                         main_score_thresh,
+                                         seed_boundary_weight=1.0,
+                                         seed_contact_weight=1.0,
+                                         boundary_weight=0.0,
+                                         contact_weight=1.0,
+                                         output_path=None):
+    """Watershed by zbigniewwojna
+    https://github.com/SpaceNetChallenge/SpaceNet_SAR_Buildings_Solutions/blob/master/1-zbigniewwojna/main.py#L570
+
+    Args:
+        footprint_score ([type]): [description]
+        boundary_score ([type]): [description]
+        contact_score ([type]): [description]
+        seed_min_area_pix ([type]): [description]
+        min_area_pix ([type]): [description]
+        seed_score_thresh ([type]): [description]
+        main_score_thresh ([type]): [description]
+        seed_boundary_weight (float, optional): [description]. Defaults to 1.0.
+        seed_contact_weight (float, optional): [description]. Defaults to 1.0.
+        boundary_weight (float, optional): [description]. Defaults to 0.0.
+        contact_weight (float, optional): [description]. Defaults to 1.0.
+        output_path ([type], optional): [description]. Defaults to None.
+
+    Returns:
+        [type]: [description]
+    """
+    import geopandas as gpd
+    import numpy as np
+    from skimage import measure
+    from skimage.morphology import watershed
+
+    seed_building_score = compute_building_score(footprint_score,
+                                                 boundary_score, contact_score,
+                                                 seed_boundary_weight,
+                                                 seed_contact_weight)
+
+    av_pred = (seed_building_score > seed_score_thresh).astype(np.uint8)
+    y_pred = measure.label(av_pred, connectivity=2, background=0)
+    y_pred = __remove_small_regions(y_pred, seed_min_area_pix)
+
+    building_score = compute_building_score(footprint_score, boundary_score,
+                                            contact_score, boundary_weight,
+                                            contact_weight)
+
+    nucl_msk = 1 - building_score
+    nucl_msk = (nucl_msk * 65535).astype('uint16')
+    y_pred = watershed(nucl_msk,
+                       y_pred,
+                       mask=(building_score > main_score_thresh),
+                       watershed_line=True)
+    y_pred = __remove_small_regions(y_pred, min_area_pix)
+    polygon_gdf = __mask_to_polys(y_pred)
 
     if output_path is not None:
         if len(polygon_gdf) > 0:
@@ -442,12 +514,34 @@ def calculate_iou(pred_poly, test_data_GDF):
     return iou_GDF
 
 
+def __new_poly_is_valid(new_poly, gdfs_next, min_iou_frames):
+    """[summary]
+
+    Args:
+        new_poly ([type]): [description]
+        gdfs_next ([type]): [description]
+        min_iou_frames ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    assert len(gdfs_next) > 0
+    for gdf_next in gdfs_next:
+        iou_GDF = calculate_iou(new_poly, gdf_next)
+        if not iou_GDF.empty and iou_GDF['iou_score'].max() >= min_iou_frames:
+            return True  # at least one match
+    return False  # no match
+
+
 def track_footprint_identifiers(json_dir,
                                 out_dir,
                                 min_iou=0.25,
                                 iou_field='iou_score',
                                 id_field='Id',
                                 reverse_order=False,
+                                num_next_frames=0,
+                                min_iou_frames=0.25,
+                                shape_update_method='none',
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
@@ -459,6 +553,9 @@ def track_footprint_identifiers(json_dir,
         iou_field (str, optional): [description]. Defaults to 'iou_score'.
         id_field (str, optional): [description]. Defaults to 'Id'.
         reverse_order (bool, optional): [description]. Defaults to False.
+        num_next_frames (int, optional): [description]. Defaults to 0.
+        min_iou_frames (float, optional): [description]. Defaults to 0.5.
+        shape_update_method (str, optional): [description]. Defaults to 'none'.
         verbose (bool, optional): [description]. Defaults to True.
         super_verbose (bool, optional): [description]. Defaults to False.
 
@@ -538,7 +635,28 @@ def track_footprint_identifiers(json_dir,
             print("", j, "file_name:", f)
             print("  ", "gdf_now.columns:", gdf_now.columns)
 
+        # XXX: motokimura added this to the baseline
+        # prepare GeoDataFrames for next frames
+        gdfs_next = []
+        for k in range(j + 1, min((j + 1) + num_next_frames, len(json_files))):
+            gdfs_next.append(
+                gpd.read_file(os.path.join(json_dir, json_files[k])))
+        if num_next_frames == 0:
+            assert len(gdfs_next) == 0
+
         if j == 0:
+            # XXX: motokimura added this to the baseline
+            n_dropped = 0
+            if len(gdfs_next) > 0:
+                for pred_idx, pred_row in gdf_now.iterrows():
+                    # check the match b/w pred_poly and next frames
+                    if __new_poly_is_valid(pred_row.geometry, gdfs_next,
+                                           min_iou_frames):
+                        pass
+                    else:
+                        gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                        n_dropped += 1
+
             # Establish initial footprints at Epoch0
             # set id
             gdf_now[id_field] = gdf_now.index.values
@@ -567,6 +685,7 @@ def track_footprint_identifiers(json_dir,
             idx = 0
             n_new = 0
             n_matched = 0
+            n_dropped = 0
             for pred_idx, pred_row in gdf_now.iterrows():
                 if verbose:
                     if (idx % 1000) == 0:
@@ -618,11 +737,20 @@ def track_footprint_identifiers(json_dir,
                         gdf_master_Edit = gdf_master_Edit.drop(
                             max_iou_row.name, axis=0)
                         n_matched += 1
-                        # # update gdf_master geometry?
-                        # # Actually let's leave the geometry the same so it doesn't move around...
-                        # gdf_master_Out.at[max_iou_row['gt_idx'], 'geometry'] = pred_poly
-                        # gdf_master_Out.at[max_iou_row['gt_idx'], 'area'] = pred_poly.area
-                        # gdf_master_Out.at[max_iou_row['gt_idx'], iou_field] = max_iou_row['iou_score']
+
+                        # XXX: motokimura added this to the baseline
+                        if shape_update_method == 'none':
+                            pass
+                        elif shape_update_method == 'latest':
+                            gdf_master_Out.at[max_iou_row['gt_idx'],
+                                              'geometry'] = pred_poly
+                            gdf_master_Out.at[max_iou_row['gt_idx'],
+                                              'area'] = pred_poly.area
+                            gdf_master_Out.at[
+                                max_iou_row['gt_idx'],
+                                iou_field] = max_iou_row['iou_score']
+                        else:
+                            raise ValueError()
 
                     else:
                         # no match,
@@ -636,15 +764,34 @@ def track_footprint_identifiers(json_dir,
                                 "trying to add an id that already exists, returning!"
                             )
                             return
-                        gdf_now.loc[pred_row.name, iou_field] = 0
-                        gdf_now.loc[pred_row.name, id_field] = new_id
-                        id_set.add(new_id)
-                        # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                        gdf_master_Out.loc[new_id] = [
-                            new_id, 0, pred_poly.area, pred_poly
-                        ]
-                        new_id += 1
-                        n_new += 1
+
+                        # XXX: motokimura added this to the baseline
+                        if len(gdfs_next) > 0:
+                            # check the match b/w pred_poly and next frames
+                            if __new_poly_is_valid(pred_poly, gdfs_next,
+                                                   min_iou_frames):
+                                gdf_now.loc[pred_row.name, iou_field] = 0
+                                gdf_now.loc[pred_row.name, id_field] = new_id
+                                id_set.add(new_id)
+                                # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                                gdf_master_Out.loc[new_id] = [
+                                    new_id, 0, pred_poly.area, pred_poly
+                                ]
+                                new_id += 1
+                                n_new += 1
+                            else:
+                                gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                                n_dropped += 1
+                        else:
+                            gdf_now.loc[pred_row.name, iou_field] = 0
+                            gdf_now.loc[pred_row.name, id_field] = new_id
+                            id_set.add(new_id)
+                            # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                            gdf_master_Out.loc[new_id] = [
+                                new_id, 0, pred_poly.area, pred_poly
+                            ]
+                            new_id += 1
+                            n_new += 1
 
                 else:
                     # no match (same exact code as right above)
@@ -656,15 +803,34 @@ def track_footprint_identifiers(json_dir,
                             "trying to add an id that already exists, returning!"
                         )
                         return
-                    gdf_now.loc[pred_row.name, iou_field] = 0
-                    gdf_now.loc[pred_row.name, id_field] = new_id
-                    id_set.add(new_id)
-                    # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                    gdf_master_Out.loc[new_id] = [
-                        new_id, 0, pred_poly.area, pred_poly
-                    ]
-                    new_id += 1
-                    n_new += 1
+
+                    # XXX: motokimura added this to the baseline
+                    if len(gdfs_next) > 0:
+                        # check the match b/w pred_poly and next frames
+                        if __new_poly_is_valid(pred_poly, gdfs_next,
+                                               min_iou_frames):
+                            gdf_now.loc[pred_row.name, iou_field] = 0
+                            gdf_now.loc[pred_row.name, id_field] = new_id
+                            id_set.add(new_id)
+                            # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                            gdf_master_Out.loc[new_id] = [
+                                new_id, 0, pred_poly.area, pred_poly
+                            ]
+                            new_id += 1
+                            n_new += 1
+                        else:
+                            gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                            n_dropped += 1
+                    else:
+                        gdf_now.loc[pred_row.name, iou_field] = 0
+                        gdf_now.loc[pred_row.name, id_field] = new_id
+                        id_set.add(new_id)
+                        # update master, cols = [id_field, iou_field, 'area', 'geometry']
+                        gdf_master_Out.loc[new_id] = [
+                            new_id, 0, pred_poly.area, pred_poly
+                        ]
+                        new_id += 1
+                        n_new += 1
 
         # print("gdf_now:", gdf_now)
         gdf_dict[f] = gdf_now
@@ -675,10 +841,11 @@ def track_footprint_identifiers(json_dir,
             gdf_now.to_file(output_path, driver="GeoJSON")
         else:
             print("Empty dataframe, writing empty gdf", output_path)
-            open(output_path, 'a').close()
+            save_empty_geojson(output_path)
 
         if verbose:
-            print("  ", "N_new, N_matched:", n_new, n_matched)
+            print("  ", "N_new, N_matched, N_dropped:", n_new, n_matched,
+                  n_dropped)
 
 
 def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
@@ -712,9 +879,8 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
                 df = gpd.read_file(json_file)
             except (fiona.errors.DriverError):
                 message = '! Invalid dataframe for %s' % json_file
-                print(message)
-                continue
-                #raise Exception(message)
+                raise Exception(message)
+
             if population == 'ground':
                 file_name_col = df.image_fname.apply(
                     lambda x: os.path.splitext(x)[0])
@@ -723,15 +889,22 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
                     os.path.basename(json_file))[0]
             else:
                 raise Exception('! Invalid population')
-            df = gpd.GeoDataFrame({
-                'filename': file_name_col,
-                'id': df.Id.astype(int),
-                'geometry': df.geometry,
-            })
-            if len(df) == 0:
+
+            if len(df) > 0:
+                df = gpd.GeoDataFrame({
+                    'filename': file_name_col,
+                    'id': df.Id.astype(int),
+                    'geometry': df.geometry,
+                })
+            else:
+                # if no building was found:
                 message = '! Empty dataframe for %s' % json_file
                 print(message)
-                #raise Exception(message)
+                df = gpd.GeoDataFrame({
+                    'filename': file_name_col,
+                    'id': 0,
+                    'geometry': ["POLYGON EMPTY"],
+                })
 
             if first_file:
                 net_df = df
