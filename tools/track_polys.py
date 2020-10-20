@@ -38,6 +38,7 @@ if __name__ == '__main__':
     reverse_order = config.TRACKING_REVERSE
     num_next_frames = config.TRACKING_NUM_AHEAD_FRAMES
     min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
+    shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
     verbose = True
     super_verbose = False
 
@@ -57,7 +58,8 @@ if __name__ == '__main__':
         input_args.append([
             track_footprint_identifiers, input_dir, json_dir,
             config.TRACKING_MIN_IOU, iou_field, id_field, reverse_order,
-            num_next_frames, min_iou_frames, verbose, super_verbose
+            num_next_frames, min_iou_frames, shape_update_method, verbose,
+            super_verbose
         ])
 
     # run multiprocessing

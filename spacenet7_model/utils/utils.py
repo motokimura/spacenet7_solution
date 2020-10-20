@@ -541,6 +541,7 @@ def track_footprint_identifiers(json_dir,
                                 reverse_order=False,
                                 num_next_frames=0,
                                 min_iou_frames=0.25,
+                                shape_update_method='none',
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
@@ -554,6 +555,7 @@ def track_footprint_identifiers(json_dir,
         reverse_order (bool, optional): [description]. Defaults to False.
         num_next_frames (int, optional): [description]. Defaults to 0.
         min_iou_frames (float, optional): [description]. Defaults to 0.5.
+        shape_update_method (str, optional): [description]. Defaults to 'none'.
         verbose (bool, optional): [description]. Defaults to True.
         super_verbose (bool, optional): [description]. Defaults to False.
 
@@ -735,11 +737,20 @@ def track_footprint_identifiers(json_dir,
                         gdf_master_Edit = gdf_master_Edit.drop(
                             max_iou_row.name, axis=0)
                         n_matched += 1
-                        # # update gdf_master geometry?
-                        # # Actually let's leave the geometry the same so it doesn't move around...
-                        # gdf_master_Out.at[max_iou_row['gt_idx'], 'geometry'] = pred_poly
-                        # gdf_master_Out.at[max_iou_row['gt_idx'], 'area'] = pred_poly.area
-                        # gdf_master_Out.at[max_iou_row['gt_idx'], iou_field] = max_iou_row['iou_score']
+
+                        # XXX: motokimura added this to the baseline
+                        if shape_update_method == 'none':
+                            pass
+                        elif shape_update_method == 'latest':
+                            gdf_master_Out.at[max_iou_row['gt_idx'],
+                                              'geometry'] = pred_poly
+                            gdf_master_Out.at[max_iou_row['gt_idx'],
+                                              'area'] = pred_poly.area
+                            gdf_master_Out.at[
+                                max_iou_row['gt_idx'],
+                                iou_field] = max_iou_row['iou_score']
+                        else:
+                            raise ValueError()
 
                     else:
                         # no match,
