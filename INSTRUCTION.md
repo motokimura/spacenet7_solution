@@ -5,7 +5,8 @@ This document provides instructions for the final testing/scoring of motokimura'
 ## Prepare SpaceNet7 data
 
 ```
-DATA_DIR=${HOME}/data/SN7_buildings  # path to download SpaceNet7 dataset
+DATA_ROOT=${HOME}/data
+DATA_DIR=${DATA_ROOT}/SN7_buildings  # path to download SpaceNet7 dataset
 mkdir -p ${DATA_DIR}
 
 # download and extract train data
@@ -30,8 +31,8 @@ tar -xvf SN7_buildings_test_public.tar.gz
 ## Prepare temporal directory
 
 ```
-WDATA_DIR=${HOME}/wdata  # path to directory for temporal files (train logs, prediction results, etc.)
-mkdir -p ${WDATA_DIR}
+WDATA_ROOT=${HOME}/wdata  # path to directory for temporal files (train logs, prediction results, etc.)
+mkdir -p ${WDATA_ROOT}
 ```
 
 ## Build image
@@ -48,7 +49,7 @@ so that `test.sh` can run without re-training the models.
 
 ```
 # launch container
-nvidia-docker run --ipc=host -v ${DATA_DIR}:/data:ro -v ${WDATA_DIR}:/wdata -it motokimura
+nvidia-docker run --ipc=host -v ${DATA_ROOT}:/data:ro -v ${WDATA_ROOT}:/wdata -it motokimura
 ```
 
 It's necessary to add `--ipc=host` option when run docker (as written in [flags.txt](flags.txt)).
