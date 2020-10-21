@@ -111,16 +111,10 @@ RUN chmod a+x /work/*.sh
 ENV PATH $PATH:/work/
 
 # download pretrained models
-#WORKDIR /work/models
-
-#RUN wget https://motokimura-public-sn7.s3.amazonaws.com/logs.zip
-#UN wget https://motokimura-public-sn7.s3.amazonaws.com/weights.zip
-#RUN wget https://motokimura-public-sn7.s3.amazonaws.com/gbm_models.zip
-#RUN wget https://motokimura-public-sn7.s3.amazonaws.com/image_mean_std.zip
-
-#RUN unzip logs.zip && rm logs.zip
-#RUN unzip weights.zip && rm weights.zip
-#RUN unzip gbm_models.zip && rm gbm_models.zip
-#RUN unzip image_mean_std.zip && rm image_mean_std.zip
+WORKDIR /work/models
+RUN wget https://motokimura-public-sn7.s3.amazonaws.com/logs.zip
+RUN wget https://motokimura-public-sn7.s3.amazonaws.com/weights.zip
+RUN unzip logs.zip && rm logs.zip
+RUN unzip weights.zip && rm weights.zip
 
 WORKDIR /work
