@@ -25,7 +25,7 @@ echo 'refining predicted masks...'
 
 echo ''
 echo 'generating polygons...'
-/work/tools/pred_array_to_poly.py \
+/work/tools/pred_mask_to_poly.py \
     REFINED_PREDICTION_ROOT ${REFINED_PREDICTION_ROOT} \
     POLY_ROOT ${POLY_ROOT} \
     ENSEMBLE_EXP_IDS "[200, 201, 202, 203, 204, 500, 501, 502, 503, 504]"
