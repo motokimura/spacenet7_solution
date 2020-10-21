@@ -21,17 +21,38 @@ def main():
     print('successfully loaded config:')
     print(config)
 
-    # prepare dataloaders and weights for averaging
-    test_dataloaders, weights = [], []
+    # prepare dataloaders, flipping flags, and weights for averaging
+    test_dataloaders, flags_hflip, flags_vflip, weights = [], [], [], []
+
     # default dataloader (w/o tta)
     test_dataloaders.append(get_test_dataloader(config))
     weights.append(1.0)
-    # dataloaders w/ tta
+    flags_hflip.append(False)
+    flags_vflip.append(False)
+
+    # dataloaders w/ tta size jittering
     for tta_resize_wh, weight in zip(config.TTA.RESIZE,
                                      config.TTA.RESIZE_WEIGHTS):
         test_dataloaders.append(
             get_test_dataloader(config, tta_resize_wh=tta_resize_wh))
         weights.append(weight)
+        flags_hflip.append(False)
+        flags_vflip.append(False)
+
+    # dataloader w/ tta horizontal flipping
+    if config.TTA.HORIZONTAL_FLIP:
+        test_dataloaders.append(get_test_dataloader(config, tta_hflip=True))
+        weights.append(config.TTA.HORIZONTAL_FLIP_WEIGHT)
+        flags_hflip.append(True)
+        flags_vflip.append(False)
+
+    # dataloader w/ tta vertical flipping
+    if config.TTA.VERTICAL_FLIP:
+        test_dataloaders.append(get_test_dataloader(config, tta_vflip=True))
+        weights.append(config.TTA.VERTICAL_FLIP_WEIGHT)
+        flags_hflip.append(False)
+        flags_vflip.append(True)
+
     # normalize weights
     weights = np.array(weights)
     weights /= weights.sum()
@@ -79,6 +100,12 @@ def main():
                     pred = pred.transpose(1, 2, 0)  # CHW -> HWC
                     pred = cv2.resize(pred, dsize=(test_width, test_height))
                     pred = pred.transpose(2, 0, 1)  # HWC -> CHW
+
+                # flip (only when flipping tta is applied)
+                if flags_vflip[dataloader_idx]:
+                    pred = pred[:, ::-1, :]
+                if flags_hflip[dataloader_idx]:
+                    pred = pred[:, :, ::-1]
 
                 # store predictions into the buffer
                 predictions_averaged[

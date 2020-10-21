@@ -55,12 +55,17 @@ def get_dataloader(config, is_train):
                                        num_workers=num_workers)
 
 
-def get_test_dataloader(config, tta_resize_wh=None):
+def get_test_dataloader(config,
+                        tta_resize_wh=None,
+                        tta_hflip=False,
+                        tta_vflip=False):
     """[summary]
 
     Args:
         config ([type]): [description]
         tta_resize_wh ([type], optional): [description]. Defaults to None.
+        tta_hflip (bool, optional): [description]. Defaults to False.
+        tta_vflip (bool, optional): [description]. Defaults to False.
 
     Returns:
         [type]: [description]
@@ -68,7 +73,9 @@ def get_test_dataloader(config, tta_resize_wh=None):
     preprocessing = get_preprocess(config, is_test=True)
     augmentation = get_augmentation(config,
                                     is_train=False,
-                                    tta_resize_wh=tta_resize_wh)
+                                    tta_resize_wh=tta_resize_wh,
+                                    tta_hflip=tta_hflip,
+                                    tta_vflip=tta_vflip)
 
     # get full paths to image files
     if config.TEST_TO_VAL:
