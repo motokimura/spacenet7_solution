@@ -6,13 +6,19 @@ import numpy as np
 import albumentations as albu
 
 
-def get_spacenet7_augmentation(config, is_train, tta_resize_wh=None):
+def get_spacenet7_augmentation(config,
+                               is_train,
+                               tta_resize_wh=None,
+                               tta_hflip=False,
+                               tta_vflip=False):
     """[summary]
 
     Args:
         config ([type]): [description]
         is_train (bool): [description]
         tta_resize_wh ([type], optional): [description]. Defaults to None.
+        tta_hflip (bool, optional): [description]. Defaults to False.
+        tta_vflip (bool, optional): [description]. Defaults to False.
 
     Returns:
         [type]: [description]
@@ -21,6 +27,8 @@ def get_spacenet7_augmentation(config, is_train, tta_resize_wh=None):
 
     if is_train:
         assert tta_resize_wh is None
+        assert not tta_hflip
+        assert not tta_vflip
 
         # size after cropping
         base_width = config.TRANSFORM.TRAIN_RANDOM_CROP_SIZE[0]
@@ -64,6 +72,13 @@ def get_spacenet7_augmentation(config, is_train, tta_resize_wh=None):
                              border_mode=0),
         ]
 
+        # tta flipping
+        if tta_hflip:
+            augmentation.append(albu.HorizontalFlip(always_apply=True))
+        if tta_vflip:
+            augmentation.append(albu.VerticalFlip(always_apply=True))
+
+        # tta size jitter
         if tta_resize_wh is None:
             tta_width, tta_height = base_width, base_height
         else:
