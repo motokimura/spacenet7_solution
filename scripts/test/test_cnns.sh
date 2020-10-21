@@ -10,7 +10,7 @@ source /work/settings.sh
 TEST_ARGS="\
     --config /work/configs/tta_resize.yml \
     --exp_log_dir ${LOG_ROOT} \
-    WEIGHT_ROOT ${WEIGHT_ROOT} \
+    --model_weight_dir ${WEIGHT_ROOT} \
     PREDICTION_ROOT ${PREDICTION_ROOT} \
     INPUT.TEST_DIR ${TEST_ROOT} \
 "
