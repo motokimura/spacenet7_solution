@@ -109,6 +109,8 @@ _C.REFINEMENT_CONTACT_NUM_FRAMES_AHEAD = 1000
 _C.REFINEMENT_CONTACT_NUM_FRAMES_BEHIND = 1000
 
 _C.METHOD_TO_MAKE_POLYGONS = 'watershed'  # ['contours', 'watershed', 'watershed2']
+_C.POLY_NUM_THREADS = 0
+
 _C.BOUNDARY_SUBTRACT_COEFF = 0.50  # for 'contours' and 'watershed'
 _C.CONTACT_SUBTRACT_COEFF = 1.00  # for 'contours' and 'watershed'
 _C.BUILDING_SCORE_THRESH = 0.5  # for 'contours'
