@@ -100,53 +100,51 @@ def refine_masks(aoi, input_root, out_root, config):
                       constant_values=np.NaN)
         preds[i] = pred
 
-        # refine each predicted mask with the aggregated mask
-        for i, pred_path in enumerate(pred_paths):
-            # compute aggregated mask for footprint
-            preds_footprint = preds[:, footprint_channel, :, :]
-            pred_aggregated_footprint = compute_aggregated_prediction(
-                preds_footprint, i,
-                config.REFINEMENT_FOOTPRINT_NUM_FRAMES_BEHIND,
-                config.REFINEMENT_FOOTPRINT_NUM_FRAMES_AHEAD)
+    # refine each predicted mask with the aggregated mask
+    for i, pred_path in enumerate(pred_paths):
+        # compute aggregated mask for footprint
+        preds_footprint = preds[:, footprint_channel, :, :]
+        pred_aggregated_footprint = compute_aggregated_prediction(
+            preds_footprint, i, config.REFINEMENT_FOOTPRINT_NUM_FRAMES_BEHIND,
+            config.REFINEMENT_FOOTPRINT_NUM_FRAMES_AHEAD)
 
-            # compute aggregated mask for boundary
-            preds_boundary = preds[:, boundary_channel, :, :]
-            pred_aggregated_boundary = compute_aggregated_prediction(
-                preds_boundary, i,
-                config.REFINEMENT_BOUNDARY_NUM_FRAMES_BEHIND,
-                config.REFINEMENT_BOUNDARY_NUM_FRAMES_AHEAD)
+        # compute aggregated mask for boundary
+        preds_boundary = preds[:, boundary_channel, :, :]
+        pred_aggregated_boundary = compute_aggregated_prediction(
+            preds_boundary, i, config.REFINEMENT_BOUNDARY_NUM_FRAMES_BEHIND,
+            config.REFINEMENT_BOUNDARY_NUM_FRAMES_AHEAD)
 
-            # compute aggregated mask for contact
-            preds_contact = preds[:, contact_channel, :, :]
-            pred_aggregated_contact = compute_aggregated_prediction(
-                preds_contact, i, config.REFINEMENT_CONTACT_NUM_FRAMES_BEHIND,
-                config.REFINEMENT_CONTACT_NUM_FRAMES_AHEAD)
+        # compute aggregated mask for contact
+        preds_contact = preds[:, contact_channel, :, :]
+        pred_aggregated_contact = compute_aggregated_prediction(
+            preds_contact, i, config.REFINEMENT_CONTACT_NUM_FRAMES_BEHIND,
+            config.REFINEMENT_CONTACT_NUM_FRAMES_AHEAD)
 
-            # refine
-            pred_refined = preds[i].copy()
+        # refine
+        pred_refined = preds[i].copy()
 
-            w_footprint = config.REFINEMENT_FOOTPRINT_WEIGHT
-            pred_refined[footprint_channel] = (1 - w_footprint) * pred_refined[
-                footprint_channel] + w_footprint * pred_aggregated_footprint
+        w_footprint = config.REFINEMENT_FOOTPRINT_WEIGHT
+        pred_refined[footprint_channel] = (1 - w_footprint) * pred_refined[
+            footprint_channel] + w_footprint * pred_aggregated_footprint
 
-            w_boundary = config.REFINEMENT_BOUNDARY_WEIGHT
-            pred_refined[boundary_channel] = (1 - w_boundary) * pred_refined[
-                boundary_channel] + w_boundary * pred_aggregated_boundary
+        w_boundary = config.REFINEMENT_BOUNDARY_WEIGHT
+        pred_refined[boundary_channel] = (1 - w_boundary) * pred_refined[
+            boundary_channel] + w_boundary * pred_aggregated_boundary
 
-            w_contact = config.REFINEMENT_CONTACT_WEIGHT
-            pred_refined[contact_channel] = (1 - w_contact) * pred_refined[
-                contact_channel] + w_contact * pred_aggregated_contact
+        w_contact = config.REFINEMENT_CONTACT_WEIGHT
+        pred_refined[contact_channel] = (1 - w_contact) * pred_refined[
+            contact_channel] + w_contact * pred_aggregated_contact
 
-            # handle padded area and non-ROI area
-            roi_mask = roi_masks[i]
-            h, w = roi_mask.shape
-            pred_refined = pred_refined[:, :h, :w]
-            pred_refined[:, np.logical_not(roi_mask)] = 0
+        # handle padded area and non-ROI area
+        roi_mask = roi_masks[i]
+        h, w = roi_mask.shape
+        pred_refined = pred_refined[:, :h, :w]
+        pred_refined[:, np.logical_not(roi_mask)] = 0
 
-            # dump
-            pred_filename = os.path.basename(pred_path)
-            dump_prediction_to_png(os.path.join(out_dir, pred_filename),
-                                   pred_refined)
+        # dump
+        pred_filename = os.path.basename(pred_path)
+        dump_prediction_to_png(os.path.join(out_dir, pred_filename),
+                               pred_refined)
 
 
 if __name__ == '__main__':
