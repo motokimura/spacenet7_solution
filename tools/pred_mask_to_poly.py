@@ -108,7 +108,7 @@ if __name__ == '__main__':
         out_dir = os.path.join(out_root, aoi)
         os.makedirs(out_dir, exist_ok=False)
 
-        for path in tqdm(paths):
+        for path in paths:
             filename = os.path.basename(path)
             filename, _ = os.path.splitext(filename)
             output_path = os.path.join(out_dir, f'{filename}.geojson')
