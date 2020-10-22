@@ -374,7 +374,7 @@ def gen_building_polys_using_watershed(building_score,
     import geopandas as gpd
     import numpy as np
     from skimage import measure
-    from skimage.morphology import watershed
+    from skimage.segmentation import watershed
 
     av_pred = (building_score > seed_score_thresh).astype(np.uint8)
     y_pred = measure.label(av_pred, connectivity=2, background=0)
@@ -434,7 +434,7 @@ def gen_building_polys_using_watershed_2(footprint_score,
     import geopandas as gpd
     import numpy as np
     from skimage import measure
-    from skimage.morphology import watershed
+    from skimage.segmentation import watershed
 
     seed_building_score = compute_building_score(footprint_score,
                                                  boundary_score, contact_score,
