@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     print('preparing input args...')
     input_args = []
-    for image_path in tqdm(image_paths):
+    for image_path in image_paths:
         aoi = get_aoi_from_path(image_path)
         # prepare aoi sub directory to output ensemble results
         out_dir = os.path.join(out_root, aoi)
