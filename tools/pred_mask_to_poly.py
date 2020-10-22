@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
 import os
+import multiprocessing as mp
 import timeit
 from glob import glob
 
 import _init_path
 from spacenet7_model.configs import load_config
-from spacenet7_model.utils import (ensemble_subdir, get_subdirs,
-                                   load_prediction_from_png,
-                                   compute_building_score,
-                                   gen_building_polys_using_contours,
-                                   gen_building_polys_using_watershed,
-                                   gen_building_polys_using_watershed_2)
+from spacenet7_model.utils import (
+    ensemble_subdir, get_subdirs, load_prediction_from_png,
+    compute_building_score, gen_building_polys_using_contours,
+    gen_building_polys_using_watershed, gen_building_polys_using_watershed_2,
+    map_wrapper)
 from tqdm import tqdm
 
 if __name__ == '__main__':
@@ -27,6 +27,13 @@ if __name__ == '__main__':
 
     out_root = os.path.join(config.POLY_ROOT, subdir)
     os.makedirs(out_root, exist_ok=False)
+
+    n_thread = config.POLY_NUM_THREADS
+    n_thread = n_thread if n_thread > 0 else mp.cpu_count()
+    print(f'N_thread for multiprocessing: {n_thread}')
+
+    print('preparing input args...')
+    input_args = []
 
     for i, aoi in enumerate(aois):
         print(f'processing {aoi} ({i + 1}/{len(aois)}) ...')
@@ -62,25 +69,24 @@ if __name__ == '__main__':
             output_path = os.path.join(out_dir, f'{filename}.geojson')
 
             if config.METHOD_TO_MAKE_POLYGONS == 'contours':
-                polys = gen_building_polys_using_contours(
-                    building_score,
+                simplify = False
+                input_args.append([
+                    gen_building_polys_using_contours,
                     config.BUILDING_MIM_AREA_PIXEL,
-                    config.BUILDING_SCORE_THRESH,
-                    simplify=False,
-                    output_path=output_path)
+                    config.BUILDING_SCORE_THRESH, simplify, output_path
+                ])
             elif config.METHOD_TO_MAKE_POLYGONS == 'watershed':
-                polys = gen_building_polys_using_watershed(
-                    building_score,
+                input_args.append([
+                    gen_building_polys_using_watershed, building_score,
                     config.WATERSHED_SEED_MIN_AREA_PIXEL,
                     config.WATERSHED_MIN_AREA_PIXEL,
-                    config.WATERSHED_SEED_THRESH,
-                    config.WATERSHED_MAIN_THRESH,
-                    output_path=output_path)
+                    config.WATERSHED_SEED_THRESH, config.WATERSHED_MAIN_THRESH,
+                    output_path
+                ])
             elif config.METHOD_TO_MAKE_POLYGONS == 'watershed2':
-                polys = gen_building_polys_using_watershed_2(
-                    footprint_score,
-                    boundary_score,
-                    contact_score,
+                input_args.append([
+                    gen_building_polys_using_watershed_2, footprint_score,
+                    boundary_score, contact_score,
                     config.WATERSHED2_SEED_MIN_AREA_PIXEL,
                     config.WATERSHED2_MIN_AREA_PIXEL,
                     config.WATERSHED2_SEED_THRESH,
@@ -88,10 +94,16 @@ if __name__ == '__main__':
                     config.WATERSHED2_SEED_BOUNDARY_SUBTRACT_COEFF,
                     config.WATERSHED2_SEED_CONTACT_SUBTRACT_COEFF,
                     config.WATERSHED2_BOUNDARY_SUBTRACT_COEFF,
-                    config.WATERSHED2_CONTACT_SUBTRACT_COEFF,
-                    output_path=output_path)
+                    config.WATERSHED2_CONTACT_SUBTRACT_COEFF, output_path
+                ])
             else:
                 raise ValueError()
+
+    print('running multiprocessing...')
+    pool = mp.Pool(processes=n_thread)
+    with tqdm(total=len(input_args)) as t:
+        for _ in pool.imap_unordered(map_wrapper, input_args):
+            t.update(1)
 
     elapsed = timeit.default_timer() - t0
     print('Time: {:.3f} min'.format(elapsed / 60.0))
