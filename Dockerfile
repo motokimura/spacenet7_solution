@@ -105,7 +105,7 @@ COPY *.sh /work/
 
 # set permissions for execution of shell/python scripts
 RUN chmod a+x /work/scripts/test/*.sh
-#RUN chmod a+x /work/scripts/train/*.sh
+#RUN chmod a+x /work/scripts/train/*.sh  # XXX: temporally commented out because train is not ready
 RUN chmod a+x /work/tools/*.py
 RUN chmod a+x /work/*.sh
 ENV PATH $PATH:/work/
