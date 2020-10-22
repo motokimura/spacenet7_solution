@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import multiprocessing as mp
 import timeit
 from glob import glob
 
@@ -11,7 +12,8 @@ from tqdm import tqdm
 import _init_path
 from spacenet7_model.configs import load_config
 from spacenet7_model.utils import (dump_prediction_to_png, ensemble_subdir,
-                                   get_subdirs, load_prediction_from_png)
+                                   get_subdirs, load_prediction_from_png,
+                                   map_wrapper)
 
 
 def mask_array(array, idx, n_behind, n_ahead):
@@ -50,67 +52,56 @@ def compute_aggregated_prediction(preds, idx, n_behind, n_ahead):
     return pred_aggregated
 
 
-if __name__ == '__main__':
-    t0 = timeit.default_timer()
+def refine_masks(aoi, input_root, out_root, config):
+    """[summary]
 
-    config = load_config()
+    Args:
+        aoi ([type]): [description]
+        input_root ([type]): [description]
+        out_root ([type]): [description]
+        config ([type]): [description]
+    """
+    pred_paths = glob(os.path.join(input_root, aoi, '*.png'))
+    pred_paths.sort()
 
-    assert len(config.ENSEMBLE_EXP_IDS) >= 1
+    out_dir = os.path.join(out_root, aoi)
+    os.makedirs(out_dir, exist_ok=False)
 
     footprint_channel = config.INPUT.CLASSES.index('building_footprint')
     boundary_channel = config.INPUT.CLASSES.index('building_boundary')
     contact_channel = config.INPUT.CLASSES.index('building_contact')
 
-    subdir = ensemble_subdir(config.ENSEMBLE_EXP_IDS)
-    input_root = os.path.join(config.ENSEMBLED_PREDICTION_ROOT, subdir)
-    aois = get_subdirs(input_root)
+    # store all predicted masks (in the aoi) into a buffer to compute aggregated mask
+    preds = np.zeros(shape=[
+        len(pred_paths),
+        len(config.INPUT.CLASSES), config.TRANSFORM.TEST_SIZE[1],
+        config.TRANSFORM.TEST_SIZE[0]
+    ])
+    roi_masks = []
+    for i, pred_path in enumerate(pred_paths):
+        # get ROI from the image
+        pred_filename = os.path.basename(pred_path)
+        image_filename, _ = os.path.splitext(pred_filename)
+        image_filename = f'{image_filename}.tif'
+        image_path = os.path.join(config.INPUT.TEST_DIR, aoi, 'images_masked',
+                                  image_filename)
+        image = io.imread(image_path)
+        roi_mask = image[:, :, 3] > 0
+        roi_masks.append(roi_mask)
+        h, w = roi_mask.shape
 
-    out_root = os.path.join(config.REFINED_PREDICTION_ROOT, subdir)
-    os.makedirs(out_root, exist_ok=False)
-
-    for i, aoi in enumerate(aois):
-        print(f'processing {aoi} ({i + 1}/{len(aois)}) ...')
-
-        pred_paths = glob(os.path.join(input_root, aoi, '*.png'))
-        pred_paths.sort()
-
-        out_dir = os.path.join(out_root, aoi)
-        os.makedirs(out_dir, exist_ok=False)
-
-        # store all predicted masks (in the aoi) into a buffer to compute aggregated mask
-        print('aggregating...')
-        preds = np.zeros(shape=[
-            len(pred_paths),
-            len(config.INPUT.CLASSES), config.TRANSFORM.TEST_SIZE[1],
-            config.TRANSFORM.TEST_SIZE[0]
-        ])
-        roi_masks = []
-        for i, pred_path in enumerate(pred_paths):
-            # get ROI from the image
-            pred_filename = os.path.basename(pred_path)
-            image_filename, _ = os.path.splitext(pred_filename)
-            image_filename = f'{image_filename}.tif'
-            image_path = os.path.join(config.INPUT.TEST_DIR, aoi,
-                                      'images_masked', image_filename)
-            image = io.imread(image_path)
-            roi_mask = image[:, :, 3] > 0
-            roi_masks.append(roi_mask)
-            h, w = roi_mask.shape
-
-            # get pred
-            pred = load_prediction_from_png(pred_path,
-                                            len(config.INPUT.CLASSES))
-            pred[:, np.logical_not(roi_mask)] = np.NaN
-            pad_w = config.TRANSFORM.TEST_SIZE[0] - w
-            pad_h = config.TRANSFORM.TEST_SIZE[1] - h
-            pred = np.pad(pred, ((0, 0), (0, pad_h), (0, pad_w)),
-                          'constant',
-                          constant_values=np.NaN)
-            preds[i] = pred
+        # get pred
+        pred = load_prediction_from_png(pred_path, len(config.INPUT.CLASSES))
+        pred[:, np.logical_not(roi_mask)] = np.NaN
+        pad_w = config.TRANSFORM.TEST_SIZE[0] - w
+        pad_h = config.TRANSFORM.TEST_SIZE[1] - h
+        pred = np.pad(pred, ((0, 0), (0, pad_h), (0, pad_w)),
+                      'constant',
+                      constant_values=np.NaN)
+        preds[i] = pred
 
         # refine each predicted mask with the aggregated mask
-        print('refining...')
-        for i, pred_path in enumerate(tqdm(pred_paths)):
+        for i, pred_path in enumerate(pred_paths):
             # compute aggregated mask for footprint
             preds_footprint = preds[:, footprint_channel, :, :]
             pred_aggregated_footprint = compute_aggregated_prediction(
@@ -156,6 +147,34 @@ if __name__ == '__main__':
             pred_filename = os.path.basename(pred_path)
             dump_prediction_to_png(os.path.join(out_dir, pred_filename),
                                    pred_refined)
+
+
+if __name__ == '__main__':
+    t0 = timeit.default_timer()
+
+    config = load_config()
+
+    assert len(config.ENSEMBLE_EXP_IDS) >= 1
+
+    subdir = ensemble_subdir(config.ENSEMBLE_EXP_IDS)
+    input_root = os.path.join(config.ENSEMBLED_PREDICTION_ROOT, subdir)
+    out_root = os.path.join(config.REFINED_PREDICTION_ROOT, subdir)
+    aois = get_subdirs(input_root)
+
+    n_thread = config.REFINEMENT_NUM_THREADS
+    n_thread = n_thread if n_thread > 0 else mp.cpu_count()
+    print(f'N_thread for multiprocessing: {n_thread}')
+
+    print('preparing input args...')
+    input_args = []
+    for i, aoi in enumerate(aois):
+        input_args.append(refine_masks, aoi, input_root, out_root, config)
+
+    print('running multiprocessing...')
+    pool = mp.Pool(processes=n_thread)
+    with tqdm(total=len(input_args)) as t:
+        for _ in pool.imap_unordered(map_wrapper, input_args):
+            t.update(1)
 
     elapsed = timeit.default_timer() - t0
     print('Time: {:.3f} min'.format(elapsed / 60.0))
