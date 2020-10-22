@@ -113,7 +113,7 @@ if __name__ == '__main__':
             filename, _ = os.path.splitext(filename)
             output_path = os.path.join(out_dir, f'{filename}.geojson')
 
-            input_args.append([generate_polys, path, output_path])
+            input_args.append([generate_polys, path, output_path, config])
 
     print('running multiprocessing...')
     pool = mp.Pool(processes=n_thread)
