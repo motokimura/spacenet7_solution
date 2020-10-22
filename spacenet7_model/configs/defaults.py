@@ -107,11 +107,8 @@ _C.REFINEMENT_BOUNDARY_NUM_FRAMES_BEHIND = 1000
 _C.REFINEMENT_CONTACT_WEIGHT = 1.00
 _C.REFINEMENT_CONTACT_NUM_FRAMES_AHEAD = 1000
 _C.REFINEMENT_CONTACT_NUM_FRAMES_BEHIND = 1000
-_C.REFINEMENT_NUM_THREADS = 0
 
 _C.METHOD_TO_MAKE_POLYGONS = 'watershed'  # ['contours', 'watershed', 'watershed2']
-_C.POLY_NUM_THREADS = 0
-
 _C.BOUNDARY_SUBTRACT_COEFF = 0.50  # for 'contours' and 'watershed'
 _C.CONTACT_SUBTRACT_COEFF = 1.00  # for 'contours' and 'watershed'
 _C.BUILDING_SCORE_THRESH = 0.5  # for 'contours'
@@ -133,9 +130,13 @@ _C.WATERSHED2_SEED_CONTACT_SUBTRACT_COEFF = 1.00  # for 'watershed2'  # XXX: not
 _C.TRACKING_MIN_IOU = 0.1
 _C.TRACKING_NUM_AHEAD_FRAMES = 3  # XXX: smaller may be better
 _C.TRACKING_MIN_IOU_NEW_BUILDING = 0.25  # valid when TRACKING_NUM_AHEAD_FRAMES > 0. XXX: not optimized
-_C.TRACKING_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
 _C.TRACKING_REVERSE = False
 _C.TRACKING_SHAPE_UPDATE_METHOD = 'none'  # ['none', 'latest']
+
+_C.ENSEMBLE_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
+_C.REFINEMENT_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
+_C.POLY_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
+_C.TRACKING_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
 
 _C.EXP_ID = 9999  # 0~9999
 
