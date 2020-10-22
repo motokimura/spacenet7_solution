@@ -168,7 +168,7 @@ if __name__ == '__main__':
     print('preparing input args...')
     input_args = []
     for i, aoi in enumerate(aois):
-        input_args.append(refine_masks, aoi, input_root, out_root, config)
+        input_args.append([refine_masks, aoi, input_root, out_root, config])
 
     print('running multiprocessing...')
     pool = mp.Pool(processes=n_thread)
