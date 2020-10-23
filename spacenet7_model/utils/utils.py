@@ -556,6 +556,9 @@ def __poly_is_new_based_on_small_intersection_with_master(
         return True
 
     iou_GDF = calculate_iou(pred_poly, gdf_master)
+    if iou_GDF.empty:
+        return True
+
     max_intersection_row = iou_GDF.loc[iou_GDF['intersection'].idxmax(
         axis=0, skipna=True)]
     intersection = max_intersection_row['intersection']
