@@ -1,4 +1,4 @@
-# Open Source Resources, Frameworks and Libraries used by this solution.
+Open Source Resources, Frameworks and Libraries used by this solution.
 
 ## Environment setup:
 
@@ -75,7 +75,7 @@
     [https://github.com/Toblerity/Shapely](https://github.com/Toblerity/Shapely),
     BSD 3-Clause
 
-# CNN model development (experiment management at local)
+## CNN model development (experiment management at local)
 
 -   YACS,
     [https://github.com/rbgirshick/yacs](https://github.com/rbgirshick/yacs),
