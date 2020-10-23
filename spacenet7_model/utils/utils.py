@@ -777,6 +777,8 @@ def track_footprint_identifiers(json_dir,
                         # remove un-matched pred which is largely occupieed by master one
                         dropped_already = False
                         if max_area_occupied > 0.0:
+                            iou_GDF = calculate_iou(pred_poly,
+                                                    gdf_dict['master'])
                             max_intersection_row = iou_GDF.loc[
                                 iou_GDF['intersection'].idxmax(axis=0,
                                                                skipna=True)]
