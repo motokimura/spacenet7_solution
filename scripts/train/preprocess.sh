@@ -16,5 +16,5 @@ echo ''
 echo 'splitting dataset...'
 /work/tools/split_dataset.py \
     --train_dir ${TRAIN_ROOT} \
-    --mask_dir ${BUILDING_MASK_DIR} \
+    --mask_dir ${BUILDING_MASK_ROOT} \
     --out_dir ${TRAIN_VAL_SPLIT_ROOT}
