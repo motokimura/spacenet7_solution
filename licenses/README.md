@@ -1,6 +1,6 @@
 Open Source Resources, Frameworks and Libraries used by this solution.
 
-## Environment setup:
+### Environment setup:
 
 -   NVIDIA Docker,
     [https://github.com/NVIDIA/nvidia-docker](https://github.com/NVIDIA/nvidia-docker),
@@ -10,7 +10,7 @@ Open Source Resources, Frameworks and Libraries used by this solution.
     [https://www.anaconda.com/](https://www.anaconda.com/), 
     BSD 3-Clause
 
-## CNN model tranning/inference:
+### CNN model tranning/inference:
 
 -   PyTorch,
     [https://pytorch.org/](https://pytorch.org/),
@@ -28,7 +28,7 @@ Open Source Resources, Frameworks and Libraries used by this solution.
     [https://github.com/pytorch/vision](https://github.com/pytorch/vision),
     BSD 3-Clause
 
-## Pre-processing for SN7 dataset:
+### Pre-processing for SN7 dataset:
 
 -   Solaris,
     [https://github.com/CosmiQ/solaris](https://github.com/CosmiQ/solaris),
@@ -49,7 +49,7 @@ Open Source Resources, Frameworks and Libraries used by this solution.
     [https://github.com/cgohlke/imagecodecs](https://github.com/cgohlke/imagecodecs),
     BSD 3-Clause
 
-## Post-processing for CNN output:
+### Post-processing for CNN output:
 
 -   NumPy,
     [https://numpy.org/](https://numpy.org/),
@@ -75,7 +75,7 @@ Open Source Resources, Frameworks and Libraries used by this solution.
     [https://github.com/Toblerity/Shapely](https://github.com/Toblerity/Shapely),
     BSD 3-Clause
 
-## CNN model development (experiment management at local)
+### CNN model development (experiment management at local)
 
 -   YACS,
     [https://github.com/rbgirshick/yacs](https://github.com/rbgirshick/yacs),
