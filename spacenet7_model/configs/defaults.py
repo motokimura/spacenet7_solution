@@ -132,6 +132,7 @@ _C.TRACKING_NUM_AHEAD_FRAMES = 3  # XXX: smaller may be better
 _C.TRACKING_MIN_IOU_NEW_BUILDING = 0.25  # valid when TRACKING_NUM_AHEAD_FRAMES > 0. XXX: not optimized
 _C.TRACKING_REVERSE = False
 _C.TRACKING_SHAPE_UPDATE_METHOD = 'none'  # ['none', 'latest']
+_C.TRACKING_MAX_AREA_OCCUPIED = 0.0  # XXX: not optimized
 
 _C.ENSEMBLE_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
 _C.REFINEMENT_NUM_THREADS = 0  # if zero, N=multiprocessing.cpu_count()
