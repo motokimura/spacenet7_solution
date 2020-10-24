@@ -468,6 +468,40 @@ def gen_building_polys_using_watershed_2(footprint_score,
     return polygon_gdf
 
 
+def __compute_preds_var(filename, image_dir, aoi, config):
+    """[summary]
+
+    Args:
+        filename ([type]): [description]
+        image_dir ([type]): [description]
+        aoi ([type]): [description]
+        config ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import os.path
+
+    import numpy as np
+    from skimage import io
+
+    image_filename = f"{filename}.tif"
+    image_path = os.path.join(image_dir, aoi, 'images_masked', image_filename)
+    image = io.imread(image_path)
+    roi_mask = image[:, :, 3] > 0
+
+    pred_filename = f"{filename}.png"
+    preds = []
+    for exp_id in config.ENSEMBLE_EXP_IDS:
+        pred_path = os.path.join(config.PREDICTION_ROOT,
+                                 experiment_subdir(exp_id), aoi, pred_filename)
+        preds.append(
+            load_prediction_from_png(pred_path, len(config.INPUT.CLASSES)))
+    preds = np.array(preds)
+    preds[:, :, np.logical_not(roi_mask)] = np.NaN
+    return np.nanmean(np.var(preds, axis=0))
+
+
 def calculate_iou(pred_poly, test_data_GDF):
     """Get the best intersection over union for a predicted polygon.
     Adapted from: https://github.com/CosmiQ/solaris/blob/master/solaris/eval/iou.py, but
@@ -605,6 +639,7 @@ def track_footprint_identifiers(config,
     min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
     shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
     max_area_occupied = config.TRACKING_MAX_AREA_OCCUPIED
+    start_tracking_from_low_variance = config.TRACKING_TRACK_FROM_LOW_VARIANCE
 
     iou_field = 'iou_score'
     id_field = 'Id'
@@ -618,6 +653,23 @@ def track_footprint_identifiers(config,
         f for f in os.listdir(os.path.join(json_dir))
         if f.endswith('.geojson') and os.path.exists(os.path.join(json_dir, f))
     ])
+
+    # XXX: motokimura added this to the baseline
+    if start_tracking_from_low_variance:
+        # load predicted masks of the first and the last frames to compute variance
+        # amoung the ensembled models then start tracking from the frame with low variance
+        # XXX: SN7 train dir is hard coded...
+        image_dir = '/data/spacenet7/spacenet7/train' if config.TEST_TO_VAL else config.INPUT.TEST_DIR
+        aoi = os.path.basename(json_dir)
+        # first frame
+        filename, _ = os.path.splitext(json_files[0])
+        var_first = __compute_preds_var(filename, image_dir, aoi, config)
+        # last frame
+        filename, _ = os.path.splitext(json_files[-1])
+        var_last = __compute_preds_var(filename, image_dir, aoi, config)
+        if var_last < var_first:
+            json_files = json_files[::-1]
+
     # start at the end and work backwards?
     if reverse_order:
         json_files = json_files[::-1]
