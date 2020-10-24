@@ -505,32 +505,68 @@ def calculate_iou(pred_poly, test_data_GDF):
             gt_idx = idx
         else:
             iou_score = 0
+            intersection = 0
+            union = 0
             gt_idx = -1
         row['iou_score'] = iou_score
         row['gt_idx'] = gt_idx
+        row['intersection'] = intersection
+        row['union'] = union
         iou_row_list.append(row)
 
     iou_GDF = gpd.GeoDataFrame(iou_row_list)
     return iou_GDF
 
 
-def __new_poly_is_valid(new_poly, gdfs_next, min_iou_frames):
-    """[summary]
+def __poly_is_new_based_on_ahead_frame_consistency(pred_poly, gdfs_next,
+                                                   min_iou_frames):
+    """Check the match b/w pred_poly and next frames
 
     Args:
-        new_poly ([type]): [description]
+        pred_poly ([type]): [description]
         gdfs_next ([type]): [description]
         min_iou_frames ([type]): [description]
 
     Returns:
         [type]: [description]
     """
-    assert len(gdfs_next) > 0
+    if len(gdfs_next) == 0:
+        return True
+
     for gdf_next in gdfs_next:
-        iou_GDF = calculate_iou(new_poly, gdf_next)
+        iou_GDF = calculate_iou(pred_poly, gdf_next)
         if not iou_GDF.empty and iou_GDF['iou_score'].max() >= min_iou_frames:
             return True  # at least one match
     return False  # no match
+
+
+def __poly_is_new_based_on_small_intersection_with_master(
+        pred_poly, gdf_master, max_area_occupied):
+    """Remove un-matched pred which is largely occupieed by master one
+
+    Args:
+        pred_poly ([type]): [description]
+        gdf_master ([type]): [description]
+        max_area_occupied ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    if max_area_occupied >= 1.0:
+        return True
+
+    iou_GDF = calculate_iou(pred_poly, gdf_master)
+    if iou_GDF.empty:
+        return True
+
+    max_intersection_row = iou_GDF.loc[iou_GDF['intersection'].idxmax(
+        axis=0, skipna=True)]
+    intersection = max_intersection_row['intersection']
+    pred_area_occupied = intersection / pred_poly.area
+    if pred_area_occupied <= max_area_occupied:
+        return True
+
+    return False
 
 
 def track_footprint_identifiers(json_dir,
@@ -542,10 +578,12 @@ def track_footprint_identifiers(json_dir,
                                 num_next_frames=0,
                                 min_iou_frames=0.25,
                                 shape_update_method='none',
+                                max_area_occupied=1.0,
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
     We need to track the global gdf instead of just the gdf of t-1.
+
     Args:
         json_dir ([type]): [description]
         out_dir ([type]): [description]
@@ -554,8 +592,9 @@ def track_footprint_identifiers(json_dir,
         id_field (str, optional): [description]. Defaults to 'Id'.
         reverse_order (bool, optional): [description]. Defaults to False.
         num_next_frames (int, optional): [description]. Defaults to 0.
-        min_iou_frames (float, optional): [description]. Defaults to 0.5.
+        min_iou_frames (float, optional): [description]. Defaults to 0.25.
         shape_update_method (str, optional): [description]. Defaults to 'none'.
+        max_area_occupied (float, optional): [description]. Defaults to 0.0.
         verbose (bool, optional): [description]. Defaults to True.
         super_verbose (bool, optional): [description]. Defaults to False.
 
@@ -563,6 +602,7 @@ def track_footprint_identifiers(json_dir,
         Exception: [description]
         Exception: [description]
         Exception: [description]
+        ValueError: [description]
         Exception: [description]
         Exception: [description]
     """
@@ -647,15 +687,13 @@ def track_footprint_identifiers(json_dir,
         if j == 0:
             # XXX: motokimura added this to the baseline
             n_dropped = 0
-            if len(gdfs_next) > 0:
-                for pred_idx, pred_row in gdf_now.iterrows():
-                    # check the match b/w pred_poly and next frames
-                    if __new_poly_is_valid(pred_row.geometry, gdfs_next,
-                                           min_iou_frames):
-                        pass
-                    else:
-                        gdf_now = gdf_now.drop(pred_row.name, axis=0)
-                        n_dropped += 1
+            for pred_idx, pred_row in gdf_now.iterrows():
+                if __poly_is_new_based_on_ahead_frame_consistency(
+                        pred_row.geometry, gdfs_next, min_iou_frames):
+                    pass
+                else:
+                    gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                    n_dropped += 1
 
             # Establish initial footprints at Epoch0
             # set id
@@ -766,23 +804,11 @@ def track_footprint_identifiers(json_dir,
                             return
 
                         # XXX: motokimura added this to the baseline
-                        if len(gdfs_next) > 0:
-                            # check the match b/w pred_poly and next frames
-                            if __new_poly_is_valid(pred_poly, gdfs_next,
-                                                   min_iou_frames):
-                                gdf_now.loc[pred_row.name, iou_field] = 0
-                                gdf_now.loc[pred_row.name, id_field] = new_id
-                                id_set.add(new_id)
-                                # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                                gdf_master_Out.loc[new_id] = [
-                                    new_id, 0, pred_poly.area, pred_poly
-                                ]
-                                new_id += 1
-                                n_new += 1
-                            else:
-                                gdf_now = gdf_now.drop(pred_row.name, axis=0)
-                                n_dropped += 1
-                        else:
+                        if __poly_is_new_based_on_ahead_frame_consistency(
+                                pred_poly, gdfs_next, min_iou_frames
+                        ) and __poly_is_new_based_on_small_intersection_with_master(
+                                pred_poly, gdf_dict['master'],
+                                max_area_occupied):
                             gdf_now.loc[pred_row.name, iou_field] = 0
                             gdf_now.loc[pred_row.name, id_field] = new_id
                             id_set.add(new_id)
@@ -792,6 +818,9 @@ def track_footprint_identifiers(json_dir,
                             ]
                             new_id += 1
                             n_new += 1
+                        else:
+                            gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                            n_dropped += 1
 
                 else:
                     # no match (same exact code as right above)
@@ -805,23 +834,10 @@ def track_footprint_identifiers(json_dir,
                         return
 
                     # XXX: motokimura added this to the baseline
-                    if len(gdfs_next) > 0:
-                        # check the match b/w pred_poly and next frames
-                        if __new_poly_is_valid(pred_poly, gdfs_next,
-                                               min_iou_frames):
-                            gdf_now.loc[pred_row.name, iou_field] = 0
-                            gdf_now.loc[pred_row.name, id_field] = new_id
-                            id_set.add(new_id)
-                            # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                            gdf_master_Out.loc[new_id] = [
-                                new_id, 0, pred_poly.area, pred_poly
-                            ]
-                            new_id += 1
-                            n_new += 1
-                        else:
-                            gdf_now = gdf_now.drop(pred_row.name, axis=0)
-                            n_dropped += 1
-                    else:
+                    if __poly_is_new_based_on_ahead_frame_consistency(
+                            pred_poly, gdfs_next, min_iou_frames
+                    ) and __poly_is_new_based_on_small_intersection_with_master(
+                            pred_poly, gdf_dict['master'], max_area_occupied):
                         gdf_now.loc[pred_row.name, iou_field] = 0
                         gdf_now.loc[pred_row.name, id_field] = new_id
                         id_set.add(new_id)
@@ -831,6 +847,9 @@ def track_footprint_identifiers(json_dir,
                         ]
                         new_id += 1
                         n_new += 1
+                    else:
+                        gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                        n_dropped += 1
 
         # print("gdf_now:", gdf_now)
         gdf_dict[f] = gdf_now
