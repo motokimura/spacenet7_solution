@@ -499,7 +499,7 @@ def __compute_preds_var(filename, image_dir, aoi, config):
             load_prediction_from_png(pred_path, len(config.INPUT.CLASSES)))
     preds = np.array(preds)
     preds[:, :, np.logical_not(roi_mask)] = np.NaN
-    return np.var(preds, axis=0).nanmean()
+    return np.nanmean(np.var(preds, axis=0))
 
 
 def calculate_iou(pred_poly, test_data_GDF):
