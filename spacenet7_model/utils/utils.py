@@ -569,32 +569,18 @@ def __poly_is_new_based_on_small_intersection_with_master(
     return False
 
 
-def track_footprint_identifiers(json_dir,
+def track_footprint_identifiers(config,
+                                json_dir,
                                 out_dir,
-                                min_iou=0.25,
-                                iou_field='iou_score',
-                                id_field='Id',
-                                reverse_order=False,
-                                num_next_frames=0,
-                                min_iou_frames=0.25,
-                                shape_update_method='none',
-                                max_area_occupied=1.0,
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
     We need to track the global gdf instead of just the gdf of t-1.
 
     Args:
+        config ([type]): [description]
         json_dir ([type]): [description]
         out_dir ([type]): [description]
-        min_iou (float, optional): [description]. Defaults to 0.25.
-        iou_field (str, optional): [description]. Defaults to 'iou_score'.
-        id_field (str, optional): [description]. Defaults to 'Id'.
-        reverse_order (bool, optional): [description]. Defaults to False.
-        num_next_frames (int, optional): [description]. Defaults to 0.
-        min_iou_frames (float, optional): [description]. Defaults to 0.25.
-        shape_update_method (str, optional): [description]. Defaults to 'none'.
-        max_area_occupied (float, optional): [description]. Defaults to 0.0.
         verbose (bool, optional): [description]. Defaults to True.
         super_verbose (bool, optional): [description]. Defaults to False.
 
@@ -611,6 +597,17 @@ def track_footprint_identifiers(json_dir,
 
     import geopandas as gpd
     import numpy as np
+
+    # get parameters from config
+    min_iou = config.TRACKING_MIN_IOU
+    reverse_order = config.TRACKING_REVERSE
+    num_next_frames = config.TRACKING_NUM_AHEAD_FRAMES
+    min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
+    shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
+    max_area_occupied = config.TRACKING_MAX_AREA_OCCUPIED
+
+    iou_field = 'iou_score'
+    id_field = 'Id'
 
     os.makedirs(out_dir, exist_ok=True)
 

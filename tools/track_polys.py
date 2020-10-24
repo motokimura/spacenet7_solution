@@ -33,13 +33,6 @@ if __name__ == '__main__':
         out_path = os.path.join(out_root, solution_filename())
 
     # some parameters
-    iou_field = 'iou_score'
-    id_field = 'Id'
-    reverse_order = config.TRACKING_REVERSE
-    num_next_frames = config.TRACKING_NUM_AHEAD_FRAMES
-    min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
-    shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
-    max_area_occupied = config.TRACKING_MAX_AREA_OCCUPIED
     verbose = True
     super_verbose = False
 
@@ -57,10 +50,8 @@ if __name__ == '__main__':
         input_dir = os.path.join(input_root, aoi)
 
         input_args.append([
-            track_footprint_identifiers, input_dir, json_dir,
-            config.TRACKING_MIN_IOU, iou_field, id_field, reverse_order,
-            num_next_frames, min_iou_frames, shape_update_method,
-            max_area_occupied, verbose, super_verbose
+            track_footprint_identifiers, config, input_dir, json_dir, verbose,
+            super_verbose
         ])
 
     # run multiprocessing
