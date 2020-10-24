@@ -572,8 +572,6 @@ def __poly_is_new_based_on_small_intersection_with_master(
 def track_footprint_identifiers(config,
                                 json_dir,
                                 out_dir,
-                                iou_field='iou_score',
-                                id_field='Id',
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
@@ -583,8 +581,6 @@ def track_footprint_identifiers(config,
         config ([type]): [description]
         json_dir ([type]): [description]
         out_dir ([type]): [description]
-        iou_field (str, optional): [description]. Defaults to 'iou_score'.
-        id_field (str, optional): [description]. Defaults to 'Id'.
         verbose (bool, optional): [description]. Defaults to True.
         super_verbose (bool, optional): [description]. Defaults to False.
 
@@ -609,6 +605,9 @@ def track_footprint_identifiers(config,
     min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
     shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
     max_area_occupied = config.TRACKING_MAX_AREA_OCCUPIED
+
+    iou_field = 'iou_score'
+    id_field = 'Id'
 
     os.makedirs(out_dir, exist_ok=True)
 

@@ -33,8 +33,6 @@ if __name__ == '__main__':
         out_path = os.path.join(out_root, solution_filename())
 
     # some parameters
-    iou_field = 'iou_score'
-    id_field = 'Id'
     verbose = True
     super_verbose = False
 
@@ -52,8 +50,8 @@ if __name__ == '__main__':
         input_dir = os.path.join(input_root, aoi)
 
         input_args.append([
-            track_footprint_identifiers, config, input_dir, json_dir,
-            iou_field, id_field, verbose, super_verbose
+            track_footprint_identifiers, config, input_dir, json_dir, verbose,
+            super_verbose
         ])
 
     # run multiprocessing
