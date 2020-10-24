@@ -639,7 +639,7 @@ def track_footprint_identifiers(config,
     min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
     shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
     max_area_occupied = config.TRACKING_MAX_AREA_OCCUPIED
-    start_tracking_from_low_variance = config.TRACK_FROM_LOW_VARIANCE
+    start_tracking_from_low_variance = config.TRACKING_TRACK_FROM_LOW_VARIANCE
 
     iou_field = 'iou_score'
     id_field = 'Id'
