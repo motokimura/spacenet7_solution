@@ -995,6 +995,12 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
     for json_dir in tqdm(json_dirs):
         json_files = sorted(glob(os.path.join(json_dir, '*.geojson')))
         for json_file in tqdm(json_files):
+
+            # XXX: motokimura added this line
+            # skip master poly geojson file
+            if os.path.basename(json_file) == master_poly_filename():
+                continue
+
             try:
                 df = gpd.read_file(json_file)
             except (fiona.errors.DriverError):
