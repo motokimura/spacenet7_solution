@@ -99,6 +99,15 @@ def val_list_filename(split_id):
     return f'val_{split_id}.json'
 
 
+def master_poly_filename():
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """
+    return 'master_polys.geojson'
+
+
 def dump_git_info(path):
     """[summary]
 
@@ -935,7 +944,7 @@ def track_footprint_identifiers(config,
                         n_dropped += 1
 
         # print("gdf_now:", gdf_now)
-        gdf_dict[f] = gdf_now
+        #gdf_dict[f] = gdf_now  # XXX: motokimura commented out this to save memory
         gdf_dict['master'] = gdf_master_Out
 
         # save!
@@ -948,6 +957,15 @@ def track_footprint_identifiers(config,
         if verbose:
             print("  ", "N_new, N_matched, N_dropped:", n_new, n_matched,
                   n_dropped)
+
+    # XXX: motokimura added this to the baseline
+    # save master poly gdf for the polygon interpolation step
+    output_path_master_poly = os.path.join(out_dir, master_poly_filename())
+    if len(gdf_dict['master']) > 0:
+        gdf_dict['master'].to_file(output_path_master_poly)
+    else:
+        print("Empty master poly dataframe, writing empty gdf", output_path)
+        save_empty_geojson(output_path_master_poly)
 
 
 def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
