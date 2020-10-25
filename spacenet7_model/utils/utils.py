@@ -552,8 +552,8 @@ def calculate_iou(pred_poly, test_data_GDF):
     return iou_GDF
 
 
-def __poly_is_new_based_on_ahead_frame_consistency(pred_poly, gdfs_next,
-                                                   min_iou_frames):
+def __poly_exists_consistently_in_ahead_frames(pred_poly, gdfs_next,
+                                               min_iou_frames):
     """Check the match b/w pred_poly and next frames
 
     Args:
@@ -574,7 +574,7 @@ def __poly_is_new_based_on_ahead_frame_consistency(pred_poly, gdfs_next,
     return False  # no match
 
 
-def __poly_is_new_based_on_small_intersection_with_master(
+def __poly_has_small_intersection_area_with_master_polys(
         pred_poly, gdf_master, max_area_occupied):
     """Remove un-matched pred which is largely occupieed by master one
 
@@ -598,6 +598,32 @@ def __poly_is_new_based_on_small_intersection_with_master(
     intersection = max_intersection_row['intersection']
     pred_area_occupied = intersection / pred_poly.area
     if pred_area_occupied <= max_area_occupied:
+        return True
+
+    return False
+
+
+def __poly_is_surrounded_by_many_master_polys(pred_poly, gdf_master,
+                                              search_radius_pixel,
+                                              max_num_intersect_polys):
+    """[summary]
+
+    Args:
+        pred_poly ([type]): [description]
+        gdf_master ([type]): [description]
+        search_radius_pixel ([type]): [description]
+        max_num_intersect_polys ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    if search_radius_pixel <= 0:
+        return False
+
+    circle = pred_poly.centroid.buffer(search_radius_pixel)
+    num_intersect_polys = gdf_master.intersects(circle).sum()
+    num_intersect_polys = num_intersect_polys - 1  # exclude pred_poly itself
+    if num_intersect_polys > max_num_intersect_polys:
         return True
 
     return False
@@ -640,6 +666,8 @@ def track_footprint_identifiers(config,
     shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
     max_area_occupied = config.TRACKING_MAX_AREA_OCCUPIED
     start_tracking_from_low_variance = config.TRACKING_TRACK_FROM_LOW_VARIANCE
+    search_radius_pixel = config.TRACKING_SEARCH_RADIUS_PIXEL
+    max_num_intersect_polys = config.TRACKING_MAX_NUM_INTERSECT_POLYS
 
     iou_field = 'iou_score'
     id_field = 'Id'
@@ -737,7 +765,7 @@ def track_footprint_identifiers(config,
             # XXX: motokimura added this to the baseline
             n_dropped = 0
             for pred_idx, pred_row in gdf_now.iterrows():
-                if __poly_is_new_based_on_ahead_frame_consistency(
+                if __poly_exists_consistently_in_ahead_frames(
                         pred_row.geometry, gdfs_next, min_iou_frames):
                     pass
                 else:
@@ -853,11 +881,14 @@ def track_footprint_identifiers(config,
                             return
 
                         # XXX: motokimura added this to the baseline
-                        if __poly_is_new_based_on_ahead_frame_consistency(
+                        if __poly_exists_consistently_in_ahead_frames(
                                 pred_poly, gdfs_next, min_iou_frames
-                        ) and __poly_is_new_based_on_small_intersection_with_master(
+                        ) and __poly_has_small_intersection_area_with_master_polys(
                                 pred_poly, gdf_dict['master'],
-                                max_area_occupied):
+                                max_area_occupied
+                        ) and not __poly_is_surrounded_by_many_master_polys(
+                                pred_poly, gdf_dict['master'],
+                                search_radius_pixel, max_num_intersect_polys):
                             gdf_now.loc[pred_row.name, iou_field] = 0
                             gdf_now.loc[pred_row.name, id_field] = new_id
                             id_set.add(new_id)
@@ -883,10 +914,13 @@ def track_footprint_identifiers(config,
                         return
 
                     # XXX: motokimura added this to the baseline
-                    if __poly_is_new_based_on_ahead_frame_consistency(
+                    if __poly_exists_consistently_in_ahead_frames(
                             pred_poly, gdfs_next, min_iou_frames
-                    ) and __poly_is_new_based_on_small_intersection_with_master(
-                            pred_poly, gdf_dict['master'], max_area_occupied):
+                    ) and __poly_has_small_intersection_area_with_master_polys(
+                            pred_poly, gdf_dict['master'], max_area_occupied
+                    ) and not __poly_is_surrounded_by_many_master_polys(
+                            pred_poly, gdf_dict['master'], search_radius_pixel,
+                            max_num_intersect_polys):
                         gdf_now.loc[pred_row.name, iou_field] = 0
                         gdf_now.loc[pred_row.name, id_field] = new_id
                         id_set.add(new_id)
