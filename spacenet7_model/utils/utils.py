@@ -962,7 +962,7 @@ def track_footprint_identifiers(config,
     # save master poly gdf for the polygon interpolation step
     output_path_master_poly = os.path.join(out_dir, master_poly_filename())
     if len(gdf_dict['master']) > 0:
-        gdf_dict['master'].to_file(output_path_master_poly)
+        gdf_dict['master'].to_file(output_path_master_poly, driver="GeoJSON")
     else:
         print("Empty master poly dataframe, writing empty gdf", output_path)
         save_empty_geojson(output_path_master_poly)
