@@ -8,7 +8,6 @@ source /work/settings.sh
 
 # predict with trained models
 TEST_ARGS="\
-    --config /work/configs/tta_resize.yml \
     --exp_log_dir ${LOG_ROOT} \
     --model_weight_dir ${WEIGHT_ROOT} \
     PREDICTION_ROOT ${PREDICTION_ROOT} \
