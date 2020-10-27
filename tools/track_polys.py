@@ -55,10 +55,10 @@ if __name__ == '__main__':
         ])
 
     # run multiprocessing
-    pool = mp.Pool(processes=n_thread)
-    with tqdm(total=len(input_args)) as t:
-        for _ in pool.imap_unordered(map_wrapper, input_args):
-            t.update(1)
+    with mp.Pool(processes=n_thread) as pool:
+        with tqdm(total=len(input_args)) as t:
+            for _ in pool.imap_unordered(map_wrapper, input_args):
+                t.update(1)
 
     # convert the geojson files into solution.csv to be submitted
     json_dirs = [os.path.join(out_root, aoi) for aoi in get_subdirs(out_root)]
