@@ -99,6 +99,15 @@ def val_list_filename(split_id):
     return f'val_{split_id}.json'
 
 
+def master_poly_filename():
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """
+    return 'master_polys.geojson'
+
+
 def dump_git_info(path):
     """[summary]
 
@@ -935,7 +944,7 @@ def track_footprint_identifiers(config,
                         n_dropped += 1
 
         # print("gdf_now:", gdf_now)
-        gdf_dict[f] = gdf_now
+        #gdf_dict[f] = gdf_now  # XXX: motokimura commented out this to save memory
         gdf_dict['master'] = gdf_master_Out
 
         # save!
@@ -949,17 +958,28 @@ def track_footprint_identifiers(config,
             print("  ", "N_new, N_matched, N_dropped:", n_new, n_matched,
                   n_dropped)
 
+    # XXX: motokimura added this to the baseline
+    # save master poly gdf for the polygon interpolation step
+    output_path_master_poly = os.path.join(out_dir, master_poly_filename())
+    if len(gdf_dict['master']) > 0:
+        gdf_dict['master'].to_file(output_path_master_poly, driver="GeoJSON")
+    else:
+        print("Empty master poly dataframe, writing empty gdf", output_path)
+        save_empty_geojson(output_path_master_poly)
 
-def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
+
+def convert_geojsons_to_csv(json_dirs,
+                            output_csv_path=None,
+                            population='proposal'):
     """Convert jsons to csv
     Population is either "ground" or "proposal"
+
     Args:
         json_dirs ([type]): [description]
-        output_csv_path ([type]): [description]
+        output_csv_path ([type], optional): [description]. Defaults to None.
         population (str, optional): [description]. Defaults to 'proposal'.
 
     Raises:
-        Exception: [description]
         Exception: [description]
         Exception: [description]
 
@@ -977,6 +997,12 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
     for json_dir in tqdm(json_dirs):
         json_files = sorted(glob(os.path.join(json_dir, '*.geojson')))
         for json_file in tqdm(json_files):
+
+            # XXX: motokimura added this line
+            # skip master poly geojson file
+            if os.path.basename(json_file) == master_poly_filename():
+                continue
+
             try:
                 df = gpd.read_file(json_file)
             except (fiona.errors.DriverError):
@@ -1004,7 +1030,7 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
                 print(message)
                 df = gpd.GeoDataFrame({
                     'filename': file_name_col,
-                    'id': 0,
+                    'id': -1,
                     'geometry': ["POLYGON EMPTY"],
                 })
 
@@ -1014,5 +1040,191 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
             else:
                 net_df = net_df.append(df)
 
-    net_df.to_csv(output_csv_path, index=False)
+    if output_csv_path is not None:
+        net_df.to_csv(output_csv_path, index=False)
+
     return net_df
+
+
+# functions for post interpolation
+
+
+def __mask_to_polygons(mask):
+    """[summary]
+
+    Args:
+        mask ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    # XXX: maybe this should be merged with __mask_to_polys() defined above
+    import numpy as np
+    from rasterio import features, Affine
+    from shapely import geometry
+
+    all_polygons = []
+    for shape, value in features.shapes(mask.astype(np.int16),
+                                        mask=(mask > 0),
+                                        transform=Affine(1.0, 0, 0, 0, 1.0,
+                                                         0)):
+        all_polygons.append(geometry.shape(shape))
+
+    all_polygons = geometry.MultiPolygon(all_polygons)
+    if not all_polygons.is_valid:
+        all_polygons = all_polygons.buffer(0)
+        # Sometimes buffer() converts a simple Multipolygon to just a Polygon,
+        # need to keep it a Multi throughout
+        if all_polygons.type == 'Polygon':
+            all_polygons = geometry.MultiPolygon([all_polygons])
+    return all_polygons
+
+
+def __get_poly_in_roi(roi_poly, poly_geometry):
+    """[summary]
+
+    Args:
+        roi_poly ([type]): [description]
+        poly_geometry ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    if roi_poly is None:
+        return poly_geometry
+    return roi_poly.intersection(poly_geometry)
+
+
+def interpolate_polys(aoi, solution_df, tracked_poly_root, test_root):
+    """[summary]
+
+    Args:
+        aoi ([type]): [description]
+        solution_df ([type]): [description]
+        tracked_poly_root ([type]): [description]
+        test_root ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import os.path
+    import geopandas as gpd
+    from skimage import io
+
+    polys_to_interpolate = []
+
+    master_poly_path = os.path.join(tracked_poly_root, aoi,
+                                    master_poly_filename())
+    master_poly_gdf = gpd.read_file(master_poly_path)
+
+    if len(master_poly_gdf) == 0:
+        # return empty list when no building was found in the AOI
+        # obviously no intrepolation will be done for this AOI
+        return []
+
+    #aoi_mask = solution_df.filename.str.endswith(aoi)
+    #solution_df = solution_df[aoi_mask]
+
+    filenames = set(solution_df.filename)
+    filenames = list(filenames)
+    filenames.sort()
+
+    # prepare roi_mask polys
+    roi_polys = {}
+    for filename in filenames:
+        image_path = os.path.join(test_root, aoi, 'images_masked',
+                                  f'{filename}.tif')
+        image = io.imread(image_path)
+        roi_mask = image[:, :, 3] > 0
+        roi_polys[filename] = __mask_to_polygons(
+            roi_mask) if roi_mask.min() == 0 else None
+
+    for poly_id in master_poly_gdf.Id:
+        # find fisrt and last frame poly_id appears
+        first_frame_idx = 1e10
+        last_frame_idx = -1
+
+        solution_df_poly = solution_df[solution_df.id == poly_id]
+        for frame_idx, filename in enumerate(filenames):
+            solution_df_poly_frame = solution_df_poly[solution_df_poly.filename
+                                                      == filename]
+            if (poly_id in solution_df_poly_frame.id.tolist()
+                ) and frame_idx < first_frame_idx:
+                first_frame_idx = frame_idx
+            if (poly_id in solution_df_poly_frame.id.tolist()
+                ) and frame_idx > last_frame_idx:
+                last_frame_idx = frame_idx
+
+        assert (first_frame_idx >= 0) and (first_frame_idx < len(filenames)), \
+            f'first={first_frame_idx}, N={len(filenames)}, (poly_id={poly_id}, filename={filename})'
+        assert (last_frame_idx >= 0) and (last_frame_idx < len(filenames)), \
+            f'last={last_frame_idx}, N={len(filenames)}, (poly_id={poly_id}, filename={filename})'
+        assert first_frame_idx <= last_frame_idx, \
+            f'first={first_frame_idx}, last={last_frame_idx}, (poly_id={poly_id}, filename={filename})'
+
+        # skip if poly_id only appears in one frame
+        if last_frame_idx == first_frame_idx:
+            continue
+
+        # find frames to which the master poly should be inserted
+        frame_idxs_for_interpolation = []
+        for frame_idx in range(first_frame_idx + 1, last_frame_idx):
+            filename = filenames[frame_idx]
+            solution_df_poly_frame = solution_df_poly[solution_df_poly.filename
+                                                      == filename]
+            if poly_id not in solution_df_poly_frame.id.tolist():
+                frame_idxs_for_interpolation.append(frame_idx)
+
+        # insert master poly
+        master_poly = master_poly_gdf[master_poly_gdf.Id == poly_id]
+        assert len(master_poly) == 1, \
+            f'found {len(master_poly)} polys (poly_id={poly_id}, filename={filename})'
+        master_poly_id = master_poly.Id.item()
+        master_poly_geometry = master_poly.geometry.item()
+
+        for frame_idx in frame_idxs_for_interpolation:
+            filename = filenames[frame_idx]
+            # remove part of master poly outside the ROI
+            roi_poly = roi_polys[filename]
+            master_poly_in_roi = __get_poly_in_roi(roi_poly,
+                                                   master_poly_geometry)
+            # skip if master poly is completely outside the ROI
+            if master_poly_in_roi.is_empty:
+                continue
+            polys_to_interpolate.append({
+                'filename': filename,
+                'id': master_poly_id,
+                'geometry': master_poly_in_roi
+            })
+
+    print(f'completed aoi: {aoi}')
+
+    return polys_to_interpolate
+
+
+def remove_polygon_empty_row_if_polygon_exists(solution_df):
+    """[summary]
+
+    Args:
+        solution_df ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    df = solution_df.reset_index(drop=True)
+
+    polygon_empty_rows = df[df.geometry == 'POLYGON EMPTY']
+    idxs_to_remove = []
+
+    for idx, row in polygon_empty_rows.iterrows():
+        filename = row.filename
+
+        # 'POLYGON EMPTY' should not appear more than twice in the same file
+        n = len(polygon_empty_rows[polygon_empty_rows.filename == filename])
+        assert n == 1, f'"POLYGON EMPTY" appears {n} (>1) times in filename: {filename}'
+
+        if len(df[df.filename == filename]) > 1:
+            # if polygon exists in the same file, remove "POLYGON EMPTY" row
+            idxs_to_remove.append(idx)
+
+    return df.drop(index=idxs_to_remove)
