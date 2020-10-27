@@ -1114,7 +1114,7 @@ def interpolate_polys(aoi, solution_df, tracked_poly_root, test_root):
     polys_to_interpolate = []
 
     master_poly_path = os.path.join(tracked_poly_root, aoi,
-                                    'master_polys.geojson')
+                                    master_poly_filename())
     master_poly_gdf = gpd.read_file(master_poly_path)
 
     #aoi_mask = solution_df.filename.str.endswith(aoi)
