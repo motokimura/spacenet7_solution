@@ -101,7 +101,7 @@ if __name__ == '__main__':
         for polys in polys_to_interpolate_tmp:
             polys_to_interpolate.extend(polys)
         polys_to_interpolate = pd.DataFrame(polys_to_interpolate)
-        solution_df.append(polys_to_interpolate)
+        solution_df = solution_df.append(polys_to_interpolate)
 
         # remove "POLYGON EMPTY" row if needed
         solution_df = remove_polygon_empty_row_if_polygon_exists(solution_df)

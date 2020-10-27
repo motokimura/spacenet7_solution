@@ -1117,6 +1117,11 @@ def interpolate_polys(aoi, solution_df, tracked_poly_root, test_root):
                                     master_poly_filename())
     master_poly_gdf = gpd.read_file(master_poly_path)
 
+    if len(master_poly_gdf) == 0:
+        # return empty list when no building was found in the AOI
+        # obviously no intrepolation will be done for this AOI
+        return []
+
     #aoi_mask = solution_df.filename.str.endswith(aoi)
     #solution_df = solution_df[aoi_mask]
 
