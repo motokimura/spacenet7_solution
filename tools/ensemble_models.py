@@ -99,10 +99,10 @@ if __name__ == '__main__':
             [ensemble_preds, image_path, aoi, out_dir, weights, config])
 
     print('running multiprocessing...')
-    pool = mp.Pool(processes=n_thread)
-    with tqdm(total=len(input_args)) as t:
-        for _ in pool.imap_unordered(map_wrapper, input_args):
-            t.update(1)
+    with mp.Pool(processes=n_thread) as pool:
+        with tqdm(total=len(input_args)) as t:
+            for _ in pool.imap_unordered(map_wrapper, input_args):
+                t.update(1)
 
     elapsed = timeit.default_timer() - t0
     print('Time: {:.3f} min'.format(elapsed / 60.0))

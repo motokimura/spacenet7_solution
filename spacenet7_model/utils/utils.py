@@ -99,6 +99,15 @@ def val_list_filename(split_id):
     return f'val_{split_id}.json'
 
 
+def master_poly_filename():
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """
+    return 'master_polys.geojson'
+
+
 def dump_git_info(path):
     """[summary]
 
@@ -468,6 +477,40 @@ def gen_building_polys_using_watershed_2(footprint_score,
     return polygon_gdf
 
 
+def __compute_preds_var(filename, image_dir, aoi, config):
+    """[summary]
+
+    Args:
+        filename ([type]): [description]
+        image_dir ([type]): [description]
+        aoi ([type]): [description]
+        config ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import os.path
+
+    import numpy as np
+    from skimage import io
+
+    image_filename = f"{filename}.tif"
+    image_path = os.path.join(image_dir, aoi, 'images_masked', image_filename)
+    image = io.imread(image_path)
+    roi_mask = image[:, :, 3] > 0
+
+    pred_filename = f"{filename}.png"
+    preds = []
+    for exp_id in config.ENSEMBLE_EXP_IDS:
+        pred_path = os.path.join(config.PREDICTION_ROOT,
+                                 experiment_subdir(exp_id), aoi, pred_filename)
+        preds.append(
+            load_prediction_from_png(pred_path, len(config.INPUT.CLASSES)))
+    preds = np.array(preds)
+    preds[:, :, np.logical_not(roi_mask)] = np.NaN
+    return np.nanmean(np.var(preds, axis=0))
+
+
 def calculate_iou(pred_poly, test_data_GDF):
     """Get the best intersection over union for a predicted polygon.
     Adapted from: https://github.com/CosmiQ/solaris/blob/master/solaris/eval/iou.py, but
@@ -505,57 +548,108 @@ def calculate_iou(pred_poly, test_data_GDF):
             gt_idx = idx
         else:
             iou_score = 0
+            intersection = 0
+            union = 0
             gt_idx = -1
         row['iou_score'] = iou_score
         row['gt_idx'] = gt_idx
+        row['intersection'] = intersection
+        row['union'] = union
         iou_row_list.append(row)
 
     iou_GDF = gpd.GeoDataFrame(iou_row_list)
     return iou_GDF
 
 
-def __new_poly_is_valid(new_poly, gdfs_next, min_iou_frames):
-    """[summary]
+def __poly_exists_consistently_in_ahead_frames(pred_poly, gdfs_next,
+                                               min_iou_frames):
+    """Check the match b/w pred_poly and next frames
 
     Args:
-        new_poly ([type]): [description]
+        pred_poly ([type]): [description]
         gdfs_next ([type]): [description]
         min_iou_frames ([type]): [description]
 
     Returns:
         [type]: [description]
     """
-    assert len(gdfs_next) > 0
+    if len(gdfs_next) == 0:
+        return True
+
     for gdf_next in gdfs_next:
-        iou_GDF = calculate_iou(new_poly, gdf_next)
+        iou_GDF = calculate_iou(pred_poly, gdf_next)
         if not iou_GDF.empty and iou_GDF['iou_score'].max() >= min_iou_frames:
             return True  # at least one match
     return False  # no match
 
 
-def track_footprint_identifiers(json_dir,
+def __poly_has_small_intersection_area_with_master_polys(
+        pred_poly, gdf_master, max_area_occupied):
+    """Remove un-matched pred which is largely occupieed by master one
+
+    Args:
+        pred_poly ([type]): [description]
+        gdf_master ([type]): [description]
+        max_area_occupied ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    if max_area_occupied >= 1.0:
+        return True
+
+    iou_GDF = calculate_iou(pred_poly, gdf_master)
+    if iou_GDF.empty:
+        return True
+
+    max_intersection_row = iou_GDF.loc[iou_GDF['intersection'].idxmax(
+        axis=0, skipna=True)]
+    intersection = max_intersection_row['intersection']
+    pred_area_occupied = intersection / pred_poly.area
+    if pred_area_occupied <= max_area_occupied:
+        return True
+
+    return False
+
+
+def __poly_is_surrounded_by_many_master_polys(pred_poly, gdf_master,
+                                              search_radius_pixel,
+                                              max_num_intersect_polys):
+    """[summary]
+
+    Args:
+        pred_poly ([type]): [description]
+        gdf_master ([type]): [description]
+        search_radius_pixel ([type]): [description]
+        max_num_intersect_polys ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    if search_radius_pixel <= 0:
+        return False
+
+    circle = pred_poly.centroid.buffer(search_radius_pixel)
+    num_intersect_polys = gdf_master.intersects(circle).sum()
+    num_intersect_polys = num_intersect_polys - 1  # exclude pred_poly itself
+    if num_intersect_polys > max_num_intersect_polys:
+        return True
+
+    return False
+
+
+def track_footprint_identifiers(config,
+                                json_dir,
                                 out_dir,
-                                min_iou=0.25,
-                                iou_field='iou_score',
-                                id_field='Id',
-                                reverse_order=False,
-                                num_next_frames=0,
-                                min_iou_frames=0.25,
-                                shape_update_method='none',
                                 verbose=True,
                                 super_verbose=False):
     """Track footprint identifiers in the deep time stack.
     We need to track the global gdf instead of just the gdf of t-1.
+
     Args:
+        config ([type]): [description]
         json_dir ([type]): [description]
         out_dir ([type]): [description]
-        min_iou (float, optional): [description]. Defaults to 0.25.
-        iou_field (str, optional): [description]. Defaults to 'iou_score'.
-        id_field (str, optional): [description]. Defaults to 'Id'.
-        reverse_order (bool, optional): [description]. Defaults to False.
-        num_next_frames (int, optional): [description]. Defaults to 0.
-        min_iou_frames (float, optional): [description]. Defaults to 0.5.
-        shape_update_method (str, optional): [description]. Defaults to 'none'.
         verbose (bool, optional): [description]. Defaults to True.
         super_verbose (bool, optional): [description]. Defaults to False.
 
@@ -563,6 +657,7 @@ def track_footprint_identifiers(json_dir,
         Exception: [description]
         Exception: [description]
         Exception: [description]
+        ValueError: [description]
         Exception: [description]
         Exception: [description]
     """
@@ -571,6 +666,20 @@ def track_footprint_identifiers(json_dir,
 
     import geopandas as gpd
     import numpy as np
+
+    # get parameters from config
+    min_iou = config.TRACKING_MIN_IOU
+    reverse_order = config.TRACKING_REVERSE
+    num_next_frames = config.TRACKING_NUM_AHEAD_FRAMES
+    min_iou_frames = config.TRACKING_MIN_IOU_NEW_BUILDING
+    shape_update_method = config.TRACKING_SHAPE_UPDATE_METHOD
+    max_area_occupied = config.TRACKING_MAX_AREA_OCCUPIED
+    start_tracking_from_low_variance = config.TRACKING_TRACK_FROM_LOW_VARIANCE
+    search_radius_pixel = config.TRACKING_SEARCH_RADIUS_PIXEL
+    max_num_intersect_polys = config.TRACKING_MAX_NUM_INTERSECT_POLYS
+
+    iou_field = 'iou_score'
+    id_field = 'Id'
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -581,6 +690,23 @@ def track_footprint_identifiers(json_dir,
         f for f in os.listdir(os.path.join(json_dir))
         if f.endswith('.geojson') and os.path.exists(os.path.join(json_dir, f))
     ])
+
+    # XXX: motokimura added this to the baseline
+    if start_tracking_from_low_variance:
+        # load predicted masks of the first and the last frames to compute variance
+        # amoung the ensembled models then start tracking from the frame with low variance
+        # XXX: SN7 train dir is hard coded...
+        image_dir = '/data/spacenet7/spacenet7/train' if config.TEST_TO_VAL else config.INPUT.TEST_DIR
+        aoi = os.path.basename(json_dir)
+        # first frame
+        filename, _ = os.path.splitext(json_files[0])
+        var_first = __compute_preds_var(filename, image_dir, aoi, config)
+        # last frame
+        filename, _ = os.path.splitext(json_files[-1])
+        var_last = __compute_preds_var(filename, image_dir, aoi, config)
+        if var_last < var_first:
+            json_files = json_files[::-1]
+
     # start at the end and work backwards?
     if reverse_order:
         json_files = json_files[::-1]
@@ -647,15 +773,13 @@ def track_footprint_identifiers(json_dir,
         if j == 0:
             # XXX: motokimura added this to the baseline
             n_dropped = 0
-            if len(gdfs_next) > 0:
-                for pred_idx, pred_row in gdf_now.iterrows():
-                    # check the match b/w pred_poly and next frames
-                    if __new_poly_is_valid(pred_row.geometry, gdfs_next,
-                                           min_iou_frames):
-                        pass
-                    else:
-                        gdf_now = gdf_now.drop(pred_row.name, axis=0)
-                        n_dropped += 1
+            for pred_idx, pred_row in gdf_now.iterrows():
+                if __poly_exists_consistently_in_ahead_frames(
+                        pred_row.geometry, gdfs_next, min_iou_frames):
+                    pass
+                else:
+                    gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                    n_dropped += 1
 
             # Establish initial footprints at Epoch0
             # set id
@@ -766,23 +890,14 @@ def track_footprint_identifiers(json_dir,
                             return
 
                         # XXX: motokimura added this to the baseline
-                        if len(gdfs_next) > 0:
-                            # check the match b/w pred_poly and next frames
-                            if __new_poly_is_valid(pred_poly, gdfs_next,
-                                                   min_iou_frames):
-                                gdf_now.loc[pred_row.name, iou_field] = 0
-                                gdf_now.loc[pred_row.name, id_field] = new_id
-                                id_set.add(new_id)
-                                # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                                gdf_master_Out.loc[new_id] = [
-                                    new_id, 0, pred_poly.area, pred_poly
-                                ]
-                                new_id += 1
-                                n_new += 1
-                            else:
-                                gdf_now = gdf_now.drop(pred_row.name, axis=0)
-                                n_dropped += 1
-                        else:
+                        if __poly_exists_consistently_in_ahead_frames(
+                                pred_poly, gdfs_next, min_iou_frames
+                        ) and __poly_has_small_intersection_area_with_master_polys(
+                                pred_poly, gdf_dict['master'],
+                                max_area_occupied
+                        ) and not __poly_is_surrounded_by_many_master_polys(
+                                pred_poly, gdf_dict['master'],
+                                search_radius_pixel, max_num_intersect_polys):
                             gdf_now.loc[pred_row.name, iou_field] = 0
                             gdf_now.loc[pred_row.name, id_field] = new_id
                             id_set.add(new_id)
@@ -792,6 +907,9 @@ def track_footprint_identifiers(json_dir,
                             ]
                             new_id += 1
                             n_new += 1
+                        else:
+                            gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                            n_dropped += 1
 
                 else:
                     # no match (same exact code as right above)
@@ -805,23 +923,13 @@ def track_footprint_identifiers(json_dir,
                         return
 
                     # XXX: motokimura added this to the baseline
-                    if len(gdfs_next) > 0:
-                        # check the match b/w pred_poly and next frames
-                        if __new_poly_is_valid(pred_poly, gdfs_next,
-                                               min_iou_frames):
-                            gdf_now.loc[pred_row.name, iou_field] = 0
-                            gdf_now.loc[pred_row.name, id_field] = new_id
-                            id_set.add(new_id)
-                            # update master, cols = [id_field, iou_field, 'area', 'geometry']
-                            gdf_master_Out.loc[new_id] = [
-                                new_id, 0, pred_poly.area, pred_poly
-                            ]
-                            new_id += 1
-                            n_new += 1
-                        else:
-                            gdf_now = gdf_now.drop(pred_row.name, axis=0)
-                            n_dropped += 1
-                    else:
+                    if __poly_exists_consistently_in_ahead_frames(
+                            pred_poly, gdfs_next, min_iou_frames
+                    ) and __poly_has_small_intersection_area_with_master_polys(
+                            pred_poly, gdf_dict['master'], max_area_occupied
+                    ) and not __poly_is_surrounded_by_many_master_polys(
+                            pred_poly, gdf_dict['master'], search_radius_pixel,
+                            max_num_intersect_polys):
                         gdf_now.loc[pred_row.name, iou_field] = 0
                         gdf_now.loc[pred_row.name, id_field] = new_id
                         id_set.add(new_id)
@@ -831,9 +939,12 @@ def track_footprint_identifiers(json_dir,
                         ]
                         new_id += 1
                         n_new += 1
+                    else:
+                        gdf_now = gdf_now.drop(pred_row.name, axis=0)
+                        n_dropped += 1
 
         # print("gdf_now:", gdf_now)
-        gdf_dict[f] = gdf_now
+        #gdf_dict[f] = gdf_now  # XXX: motokimura commented out this to save memory
         gdf_dict['master'] = gdf_master_Out
 
         # save!
@@ -847,17 +958,28 @@ def track_footprint_identifiers(json_dir,
             print("  ", "N_new, N_matched, N_dropped:", n_new, n_matched,
                   n_dropped)
 
+    # XXX: motokimura added this to the baseline
+    # save master poly gdf for the polygon interpolation step
+    output_path_master_poly = os.path.join(out_dir, master_poly_filename())
+    if len(gdf_dict['master']) > 0:
+        gdf_dict['master'].to_file(output_path_master_poly, driver="GeoJSON")
+    else:
+        print("Empty master poly dataframe, writing empty gdf", output_path)
+        save_empty_geojson(output_path_master_poly)
 
-def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
+
+def convert_geojsons_to_csv(json_dirs,
+                            output_csv_path=None,
+                            population='proposal'):
     """Convert jsons to csv
     Population is either "ground" or "proposal"
+
     Args:
         json_dirs ([type]): [description]
-        output_csv_path ([type]): [description]
+        output_csv_path ([type], optional): [description]. Defaults to None.
         population (str, optional): [description]. Defaults to 'proposal'.
 
     Raises:
-        Exception: [description]
         Exception: [description]
         Exception: [description]
 
@@ -875,6 +997,12 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
     for json_dir in tqdm(json_dirs):
         json_files = sorted(glob(os.path.join(json_dir, '*.geojson')))
         for json_file in tqdm(json_files):
+
+            # XXX: motokimura added this line
+            # skip master poly geojson file
+            if os.path.basename(json_file) == master_poly_filename():
+                continue
+
             try:
                 df = gpd.read_file(json_file)
             except (fiona.errors.DriverError):
@@ -902,7 +1030,7 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
                 print(message)
                 df = gpd.GeoDataFrame({
                     'filename': file_name_col,
-                    'id': 0,
+                    'id': -1,
                     'geometry': ["POLYGON EMPTY"],
                 })
 
@@ -912,5 +1040,191 @@ def convert_geojsons_to_csv(json_dirs, output_csv_path, population='proposal'):
             else:
                 net_df = net_df.append(df)
 
-    net_df.to_csv(output_csv_path, index=False)
+    if output_csv_path is not None:
+        net_df.to_csv(output_csv_path, index=False)
+
     return net_df
+
+
+# functions for post interpolation
+
+
+def __mask_to_polygons(mask):
+    """[summary]
+
+    Args:
+        mask ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    # XXX: maybe this should be merged with __mask_to_polys() defined above
+    import numpy as np
+    from rasterio import features, Affine
+    from shapely import geometry
+
+    all_polygons = []
+    for shape, value in features.shapes(mask.astype(np.int16),
+                                        mask=(mask > 0),
+                                        transform=Affine(1.0, 0, 0, 0, 1.0,
+                                                         0)):
+        all_polygons.append(geometry.shape(shape))
+
+    all_polygons = geometry.MultiPolygon(all_polygons)
+    if not all_polygons.is_valid:
+        all_polygons = all_polygons.buffer(0)
+        # Sometimes buffer() converts a simple Multipolygon to just a Polygon,
+        # need to keep it a Multi throughout
+        if all_polygons.type == 'Polygon':
+            all_polygons = geometry.MultiPolygon([all_polygons])
+    return all_polygons
+
+
+def __get_poly_in_roi(roi_poly, poly_geometry):
+    """[summary]
+
+    Args:
+        roi_poly ([type]): [description]
+        poly_geometry ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    if roi_poly is None:
+        return poly_geometry
+    return roi_poly.intersection(poly_geometry)
+
+
+def interpolate_polys(aoi, solution_df, tracked_poly_root, test_root):
+    """[summary]
+
+    Args:
+        aoi ([type]): [description]
+        solution_df ([type]): [description]
+        tracked_poly_root ([type]): [description]
+        test_root ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    import os.path
+    import geopandas as gpd
+    from skimage import io
+
+    polys_to_interpolate = []
+
+    master_poly_path = os.path.join(tracked_poly_root, aoi,
+                                    master_poly_filename())
+    master_poly_gdf = gpd.read_file(master_poly_path)
+
+    if len(master_poly_gdf) == 0:
+        # return empty list when no building was found in the AOI
+        # obviously no intrepolation will be done for this AOI
+        return []
+
+    #aoi_mask = solution_df.filename.str.endswith(aoi)
+    #solution_df = solution_df[aoi_mask]
+
+    filenames = set(solution_df.filename)
+    filenames = list(filenames)
+    filenames.sort()
+
+    # prepare roi_mask polys
+    roi_polys = {}
+    for filename in filenames:
+        image_path = os.path.join(test_root, aoi, 'images_masked',
+                                  f'{filename}.tif')
+        image = io.imread(image_path)
+        roi_mask = image[:, :, 3] > 0
+        roi_polys[filename] = __mask_to_polygons(
+            roi_mask) if roi_mask.min() == 0 else None
+
+    for poly_id in master_poly_gdf.Id:
+        # find fisrt and last frame poly_id appears
+        first_frame_idx = 1e10
+        last_frame_idx = -1
+
+        solution_df_poly = solution_df[solution_df.id == poly_id]
+        for frame_idx, filename in enumerate(filenames):
+            solution_df_poly_frame = solution_df_poly[solution_df_poly.filename
+                                                      == filename]
+            if (poly_id in solution_df_poly_frame.id.tolist()
+                ) and frame_idx < first_frame_idx:
+                first_frame_idx = frame_idx
+            if (poly_id in solution_df_poly_frame.id.tolist()
+                ) and frame_idx > last_frame_idx:
+                last_frame_idx = frame_idx
+
+        assert (first_frame_idx >= 0) and (first_frame_idx < len(filenames)), \
+            f'first={first_frame_idx}, N={len(filenames)}, (poly_id={poly_id}, filename={filename})'
+        assert (last_frame_idx >= 0) and (last_frame_idx < len(filenames)), \
+            f'last={last_frame_idx}, N={len(filenames)}, (poly_id={poly_id}, filename={filename})'
+        assert first_frame_idx <= last_frame_idx, \
+            f'first={first_frame_idx}, last={last_frame_idx}, (poly_id={poly_id}, filename={filename})'
+
+        # skip if poly_id only appears in one frame
+        if last_frame_idx == first_frame_idx:
+            continue
+
+        # find frames to which the master poly should be inserted
+        frame_idxs_for_interpolation = []
+        for frame_idx in range(first_frame_idx + 1, last_frame_idx):
+            filename = filenames[frame_idx]
+            solution_df_poly_frame = solution_df_poly[solution_df_poly.filename
+                                                      == filename]
+            if poly_id not in solution_df_poly_frame.id.tolist():
+                frame_idxs_for_interpolation.append(frame_idx)
+
+        # insert master poly
+        master_poly = master_poly_gdf[master_poly_gdf.Id == poly_id]
+        assert len(master_poly) == 1, \
+            f'found {len(master_poly)} polys (poly_id={poly_id}, filename={filename})'
+        master_poly_id = master_poly.Id.item()
+        master_poly_geometry = master_poly.geometry.item()
+
+        for frame_idx in frame_idxs_for_interpolation:
+            filename = filenames[frame_idx]
+            # remove part of master poly outside the ROI
+            roi_poly = roi_polys[filename]
+            master_poly_in_roi = __get_poly_in_roi(roi_poly,
+                                                   master_poly_geometry)
+            # skip if master poly is completely outside the ROI
+            if master_poly_in_roi.is_empty:
+                continue
+            polys_to_interpolate.append({
+                'filename': filename,
+                'id': master_poly_id,
+                'geometry': master_poly_in_roi
+            })
+
+    print(f'completed aoi: {aoi}')
+
+    return polys_to_interpolate
+
+
+def remove_polygon_empty_row_if_polygon_exists(solution_df):
+    """[summary]
+
+    Args:
+        solution_df ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    df = solution_df.reset_index(drop=True)
+
+    polygon_empty_rows = df[df.geometry == 'POLYGON EMPTY']
+    idxs_to_remove = []
+
+    for idx, row in polygon_empty_rows.iterrows():
+        filename = row.filename
+
+        # 'POLYGON EMPTY' should not appear more than twice in the same file
+        n = len(polygon_empty_rows[polygon_empty_rows.filename == filename])
+        assert n == 1, f'"POLYGON EMPTY" appears {n} (>1) times in filename: {filename}'
+
+        if len(df[df.filename == filename]) > 1:
+            # if polygon exists in the same file, remove "POLYGON EMPTY" row
+            idxs_to_remove.append(idx)
+
+    return df.drop(index=idxs_to_remove)

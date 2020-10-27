@@ -83,8 +83,15 @@ def refine_masks(aoi, input_root, out_root, config):
         pred_filename = os.path.basename(pred_path)
         image_filename, _ = os.path.splitext(pred_filename)
         image_filename = f'{image_filename}.tif'
-        image_path = os.path.join(config.INPUT.TEST_DIR, aoi, 'images_masked',
-                                  image_filename)
+        if config.TEST_TO_VAL:
+            # only for local valication
+            # XXX: SN7 train dir is hard coded...
+            image_path = os.path.join('/data/spacenet7/spacenet7/train', aoi,
+                                      'images_masked', image_filename)
+        else:
+            # default
+            image_path = os.path.join(config.INPUT.TEST_DIR, aoi,
+                                      'images_masked', image_filename)
         image = io.imread(image_path)
         roi_mask = image[:, :, 3] > 0
         roi_masks.append(roi_mask)
@@ -169,10 +176,10 @@ if __name__ == '__main__':
         input_args.append([refine_masks, aoi, input_root, out_root, config])
 
     print('running multiprocessing...')
-    pool = mp.Pool(processes=n_thread)
-    with tqdm(total=len(input_args)) as t:
-        for _ in pool.imap_unordered(map_wrapper, input_args):
-            t.update(1)
+    with mp.Pool(processes=n_thread) as pool:
+        with tqdm(total=len(input_args)) as t:
+            for _ in pool.imap_unordered(map_wrapper, input_args):
+                t.update(1)
 
     elapsed = timeit.default_timer() - t0
     print('Time: {:.3f} min'.format(elapsed / 60.0))
