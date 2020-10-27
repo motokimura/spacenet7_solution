@@ -8,7 +8,6 @@ source /work/settings.sh
 
 # predict with trained models
 TEST_ARGS="\
-    --config /work/configs/tta_resize.yml \
     --exp_log_dir ${LOG_ROOT} \
     --model_weight_dir ${WEIGHT_ROOT} \
     PREDICTION_ROOT ${PREDICTION_ROOT} \
@@ -19,7 +18,7 @@ mkdir -p ${TEST_STDOUT_ROOT}
 
 echo ''
 echo 'predicting... (1/3)'
-echo 'this will take ~15 min'
+echo 'this will take ~10 min'
 echo 'you can check progress from '${TEST_STDOUT_ROOT}'/*.out'
 
 nohup env CUDA_VISIBLE_DEVICES=0 /work/tools/test_spacenet7_model.py \
@@ -46,7 +45,7 @@ wait
 
 echo ''
 echo 'predicting... (2/3)'
-echo 'this will take ~25 min'
+echo 'this will take ~15 min'
 echo 'you can check progress from '${TEST_STDOUT_ROOT}'/*.out'
 
 nohup env CUDA_VISIBLE_DEVICES=0 /work/tools/test_spacenet7_model.py \
@@ -73,7 +72,7 @@ wait
 
 echo ''
 echo 'predicting... (3/3)'
-echo 'this will take ~25 min'
+echo 'this will take ~15 min'
 echo 'you can check progress from '${TEST_STDOUT_ROOT}'/*.out'
 
 nohup env CUDA_VISIBLE_DEVICES=0 /work/tools/test_spacenet7_model.py \
