@@ -33,6 +33,7 @@ echo 'generating polygons...'
 echo ''
 echo 'tracking polygons...'
 /work/tools/track_polys.py \
+    INPUT.TEST_DIR ${TEST_ROOT} \
     POLY_ROOT ${POLY_ROOT} \
     TRACKED_POLY_ROOT ${TRACKED_POLY_ROOT} \
     SOLUTION_OUTPUT_PATH ${OUTPUT_CSV_PATH} \
