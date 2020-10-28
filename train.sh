@@ -18,4 +18,4 @@ rm -rf ${MODEL_ROOT}/*
 /work/scripts/train/train_cnns.sh
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
-echo 'Total time for testing: ' $(($ELAPSED_TIME / 60 + 1)) '[min]'
+echo 'Total time for training: ' $(($ELAPSED_TIME / 60 + 1)) '[min]'

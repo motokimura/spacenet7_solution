@@ -17,7 +17,7 @@ TEST_ARGS="\
 mkdir -p ${TEST_STDOUT_ROOT}
 
 echo ''
-echo 'predicting... (1/3)'
+echo 'predicting... (1/4)'
 echo 'this will take ~10 min'
 echo 'you can check progress from '${TEST_STDOUT_ROOT}'/*.out'
 
@@ -44,7 +44,7 @@ nohup env CUDA_VISIBLE_DEVICES=3 /work/tools/test_spacenet7_model.py \
 wait
 
 echo ''
-echo 'predicting... (2/3)'
+echo 'predicting... (2/4)'
 echo 'this will take ~15 min'
 echo 'you can check progress from '${TEST_STDOUT_ROOT}'/*.out'
 
@@ -71,7 +71,7 @@ nohup env CUDA_VISIBLE_DEVICES=3 /work/tools/test_spacenet7_model.py \
 wait
 
 echo ''
-echo 'predicting... (3/3)'
+echo 'predicting... (3/4)'
 echo 'this will take ~15 min'
 echo 'you can check progress from '${TEST_STDOUT_ROOT}'/*.out'
 
@@ -84,6 +84,38 @@ nohup env CUDA_VISIBLE_DEVICES=1 /work/tools/test_spacenet7_model.py \
     --exp_id 504 \
     ${TEST_ARGS} \
     > ${TEST_STDOUT_ROOT}/exp_0504.out 2>&1 &
+
+nohup env CUDA_VISIBLE_DEVICES=2 /work/tools/test_spacenet7_model.py \
+    --exp_id 700 \
+    ${TEST_ARGS} \
+    > ${TEST_STDOUT_ROOT}/exp_0700.out 2>&1 &
+
+nohup env CUDA_VISIBLE_DEVICES=3 /work/tools/test_spacenet7_model.py \
+    --exp_id 701 \
+    ${TEST_ARGS} \
+    > ${TEST_STDOUT_ROOT}/exp_0701.out 2>&1 &
+
+wait
+
+echo ''
+echo 'predicting... (4/4)'
+echo 'this will take ~15 min'
+echo 'you can check progress from '${TEST_STDOUT_ROOT}'/*.out'
+
+nohup env CUDA_VISIBLE_DEVICES=0 /work/tools/test_spacenet7_model.py \
+    --exp_id 702 \
+    ${TEST_ARGS} \
+    > ${TEST_STDOUT_ROOT}/exp_0702.out 2>&1 &
+
+nohup env CUDA_VISIBLE_DEVICES=1 /work/tools/test_spacenet7_model.py \
+    --exp_id 703 \
+    ${TEST_ARGS} \
+    > ${TEST_STDOUT_ROOT}/exp_0703.out 2>&1 &
+
+nohup env CUDA_VISIBLE_DEVICES=2 /work/tools/test_spacenet7_model.py \
+    --exp_id 704 \
+    ${TEST_ARGS} \
+    > ${TEST_STDOUT_ROOT}/exp_0704.out 2>&1 &
 
 wait
 

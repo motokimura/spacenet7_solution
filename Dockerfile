@@ -113,8 +113,8 @@ ENV PATH $PATH:/work/
 # download pretrained models
 # these models are removed before training (see train.sh)
 WORKDIR /work/models
-RUN wget https://motokimura-public-sn7.s3.amazonaws.com/logs.zip
-RUN wget https://motokimura-public-sn7.s3.amazonaws.com/weights.zip
+RUN wget https://motokimura-public-sn7.s3.amazonaws.com/logs_20201029_01.zip
+RUN wget https://motokimura-public-sn7.s3.amazonaws.com/weights_20201029_01.zip
 RUN unzip logs.zip && rm logs.zip
 RUN unzip weights.zip && rm weights.zip
 
