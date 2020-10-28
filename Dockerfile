@@ -115,7 +115,7 @@ ENV PATH $PATH:/work/
 WORKDIR /work/models
 RUN wget https://motokimura-public-sn7.s3.amazonaws.com/logs_20201029_01.zip
 RUN wget https://motokimura-public-sn7.s3.amazonaws.com/weights_20201029_01.zip
-RUN unzip logs.zip && rm logs.zip
-RUN unzip weights.zip && rm weights.zip
+RUN unzip logs_20201029_01.zip && rm logs_20201029_01.zip
+RUN unzip weights_20201029_01.zip && rm weights_20201029_01.zip
 
 WORKDIR /work
